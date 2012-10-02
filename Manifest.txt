@@ -3,11 +3,11 @@ Manifest.txt
 PostInstall.txt
 README.rdoc
 Rakefile
-lib/diff.rb
+lib/distinctio.rb
 script/console
 script/destroy
 script/generate
-spec/spec.opts
 spec/spec_helper.rb
-spec/diff_spec.rb
+spec/base_simple_spec.rb
+spec/base_text_spec.rb
 tasks/rspec.rake

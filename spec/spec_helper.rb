@@ -1,4 +1,4 @@
-require 'diff'
+require 'distinctio'
 
 RSpec.configure do |config|
   config.mock_with :rspec

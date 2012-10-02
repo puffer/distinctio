@@ -2,7 +2,7 @@ require 'spec_helper.rb'
 
 describe "simple diff" do
   describe "simple method" do
-    subject { Diff::Differ.new }
+    subject { Distinctio::Base.new }
 
     shared_examples_for "calc and apply difference" do
       specify { subject.calc(a, b).should == delta }

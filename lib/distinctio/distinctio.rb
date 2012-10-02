@@ -1,6 +1,6 @@
 require 'diff_match_patch'
 
-class Diff::Differ
+class Distinctio::Base
   attr_reader :method
 
   def initialize(options={})
@@ -97,8 +97,6 @@ class Diff::Differ
           x, y = v.first, v.last
           (result[k] == x ? y : x).tap do |new_value|
             if new_value != nil
-
-
               result[k] = new_value
             else
               result.delete(k)

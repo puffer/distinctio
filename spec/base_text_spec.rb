@@ -2,7 +2,7 @@ require 'spec_helper.rb'
 
 describe "simple diff" do
   describe "text method" do
-    subject { Diff::Differ.new method: :text }
+    subject { Distinctio::Base.new method: :text }
 
     context "a and b are hashes" do
       let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
