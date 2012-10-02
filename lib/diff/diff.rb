@@ -58,12 +58,11 @@ class Diff::Differ
 
     (c.keys | d.keys).each_with_object({}) do |key, hsh|
       x, y = c[key], d[key]
-      if method == :text && x.is_a?(String) && y.is_a?(String)
+      hsh[key] = if method == :text && x.is_a?(String) && y.is_a?(String)
         patch = diff_match_path.patch_make(x, y)
-
-        hsh[key] = diff_match_path.patch_toText patch
+        diff_match_path.patch_toText patch
       else
-        hsh[key] = [x, y] if x != y
+        [x, y] if x != y
       end
     end
   end
@@ -82,13 +81,19 @@ class Diff::Differ
   def apply_hash_delta(hsh, delta)
     hsh.dup.tap do |result|
       delta.each do |k, v|
-        x, y = v.first, v.last
+        if method == :text && result[k].is_a?(String)
+          patch = diff_match_path.patch_fromText(v)
+          result[k] = diff_match_path.patch_apply patch
+        else
+          x, y = v.first, v.last
+          (result[k] == x ? y : x).tap do |new_value|
+            if new_value != nil
 
-        (result[k] == x ? y : x).tap do |new_value|
-          if new_value != nil
-            result[k] = new_value
-          else
-            result.delete(k)
+
+              result[k] = new_value
+            else
+              result.delete(k)
+            end
           end
         end
       end
