@@ -43,7 +43,13 @@ class Diff::Differ
       d.each { |k, v| x[k] = apply_hash_delta (x[k] || {}), v }
       x.map  { |k, v| v.merge id_key_name => k }.reject { |e| e.count == 1 }
     else
-      a == delta.last ? delta.first : delta.last
+
+      if method == :text && a.is_a?(String)
+        patch = diff_match_path.patch_fromText(delta)
+        diff_match_path.patch_apply(patch, a).first
+      else
+        a == delta.last ? delta.first : delta.last
+      end
     end
   end
 
@@ -58,11 +64,14 @@ class Diff::Differ
 
     (c.keys | d.keys).each_with_object({}) do |key, hsh|
       x, y = c[key], d[key]
-      hsh[key] = if method == :text && x.is_a?(String) && y.is_a?(String)
-        patch = diff_match_path.patch_make(x, y)
-        diff_match_path.patch_toText patch
-      else
-        [x, y] if x != y
+
+      if x != y
+        if method == :text && x.is_a?(String) && y.is_a?(String)
+          patch = diff_match_path.patch_make(x, y)
+          hsh[key] = diff_match_path.patch_toText patch
+        else
+          hsh[key] = [x, y]
+        end
       end
     end
   end
@@ -83,7 +92,7 @@ class Diff::Differ
       delta.each do |k, v|
         if method == :text && result[k].is_a?(String)
           patch = diff_match_path.patch_fromText(v)
-          result[k] = diff_match_path.patch_apply patch
+          result[k] = diff_match_path.patch_apply(patch, result[k]).first
         else
           x, y = v.first, v.last
           (result[k] == x ? y : x).tap do |new_value|

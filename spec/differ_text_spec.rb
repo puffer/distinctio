@@ -8,7 +8,6 @@ describe "simple diff" do
       let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
       let(:b) { { :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
       let(:delta) { {
-        :name => "",
         :message => "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n",
         :extra => [nil, "Extra."]
       } }
