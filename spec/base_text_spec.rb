@@ -12,7 +12,7 @@ describe "simple diff" do
         :extra => [nil, "Extra."]
       } }
 
-      specify { subject.calc(a, b).should == delta }
+      specify { subject.calc(a, b, { :message => :text }).should == delta }
       specify { subject.apply(a, delta).should == b }
     end
 
@@ -23,6 +23,34 @@ describe "simple diff" do
 
       specify { subject.calc(a, b).should == delta }
       specify { subject.apply(a, delta).should == b }
+    end
+
+    context do
+      let(:a) { {
+          :name => 'Page',
+          :page_parts => [
+            { :id => 1, :body => "Lorem ipsum" },
+            { :id => 2, :body => "Sit amet" }
+          ]
+      } }
+      let(:b) { {
+          :name => 'Page',
+          :page_parts => [
+            { :id => 1, :body => "Lorem ipsum dolor" },
+            { :id => 2, :body => "Sit amet consectetur" }
+          ]
+      } }
+
+      let(:delta) { {
+        :page_parts => [
+          { :body=>"@@ -4,8 +4,14 @@\n em ipsum\n+ dolor\n", :id=>1 },
+          { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", :id=>2 }
+        ]
+      } }
+      subject { Distinctio::Base.new }
+
+      specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text }).should == delta }
+
     end
   end
 end

@@ -12,19 +12,21 @@ class Distinctio::Base
   end
 
   # TODO: Strategies
-  def calc(a, b)
+  def calc(a, b, options={})
     if (a == nil && b == nil) || (a != nil && a == b)
       {}
     elsif a.is_a?(String) && b.is_a?(String) && (method == :text)
       patch = diff_match_path.patch_make(a, b)
       diff_match_path.patch_toText patch
     elsif a.is_a?(Hash) && b.is_a?(Hash)
-      get_delta(a, b)
+      get_delta(a, b, options)
     elsif array_of_hashes?(a) && array_of_hashes?(b)
       x, y = ary_2_hsh(a), ary_2_hsh(b)
       id_key_name = a.first.has_key?(:id) ? :id : "id"
 
-      (x.keys | y.keys).map { |k| get_delta(x[k], y[k]).merge id_key_name => k }.reject { |e| e.count == 1 }
+      (x.keys | y.keys).map do |k|
+        get_delta(x[k], y[k], options).merge id_key_name => k
+      end.reject { |e| e.count == 1 }
     else
       [a, b]
     end
@@ -59,16 +61,37 @@ class Distinctio::Base
     @diff_match_path ||= DiffMatchPatch.new
   end
 
-  def get_delta(a, b)
+  def get_delta(a, b, options={})
     c, d = a == nil ? {} : a, b == nil ? {} : b
 
     (c.keys | d.keys).each_with_object({}) do |key, hsh|
       x, y = c[key], d[key]
 
+      current_option = options[key.to_s] || options[key.to_sym] || :simple
+
       if x != y
-        if method == :text && x.is_a?(String) && y.is_a?(String)
+        if current_option == :text && x.is_a?(String) && y.is_a?(String)
           patch = diff_match_path.patch_make(x, y)
           hsh[key] = diff_match_path.patch_toText patch
+        elsif current_option == :object && x.is_a?(Hash) && y.is_a?(Hash)
+          hsh[key] = get_delta(x, y)
+
+        elsif current_option == :object && array_of_hashes?(x) && array_of_hashes?(y)
+
+          opts = options.each_with_object({}) do |(ok, ov), hsh|
+            if ok.to_s.start_with? "#{key.to_s}."
+              subkey = ok.to_s.gsub "#{key.to_s}.", ""
+              hsh[subkey] = ov
+            end
+          end
+
+          #TODO: Remove duplication
+          p, k = ary_2_hsh(x), ary_2_hsh(y)
+          id_key_name = x.first.has_key?(:id) ? :id : "id"
+
+          hsh[key] = (p.keys | k.keys).map do |kk|
+            get_delta(p[kk], k[kk], opts).merge id_key_name => kk
+          end.reject { |e| e.count == 1 }
         else
           hsh[key] = [x, y]
         end
