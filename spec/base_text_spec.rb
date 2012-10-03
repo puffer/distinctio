@@ -2,7 +2,7 @@ require 'spec_helper.rb'
 
 describe "simple diff" do
   describe "text method" do
-    subject { Distinctio::Base.new method: :text }
+    subject { Distinctio::Base.new }
 
     context "a and b are hashes" do
       let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
@@ -13,7 +13,7 @@ describe "simple diff" do
       } }
 
       specify { subject.calc(a, b, { :message => :text }).should == delta }
-      specify { subject.apply(a, delta).should == b }
+      specify { subject.apply(a, delta, :text).should == b }
     end
 
     context "a and b are strings" do
@@ -21,8 +21,8 @@ describe "simple diff" do
       let(:b) { 'The world is mine!' }
       let(:delta) { "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n" }
 
-      specify { subject.calc(a, b).should == delta }
-      specify { subject.apply(a, delta).should == b }
+      specify { subject.calc(a, b, :text).should == delta }
+      specify { subject.apply(a, delta, :text).should == b }
     end
 
     context do

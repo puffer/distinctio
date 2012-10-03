@@ -1,103 +1,58 @@
 require 'diff_match_patch'
 
 class Distinctio::Base
-  attr_reader :method
-
-  def initialize(options={})
-    if options.delete(:method) == :text
-      @method = :text
-    else
-      @method = :object
-    end
-  end
-
-  # TODO: Strategies
   def calc(a, b, options={})
-    if (a == nil && b == nil) || (a != nil && a == b)
-      {}
-    elsif a.is_a?(String) && b.is_a?(String) && (method == :text)
-      patch = diff_match_path.patch_make(a, b)
-      diff_match_path.patch_toText patch
-    elsif a.is_a?(Hash) && b.is_a?(Hash)
-      get_delta(a, b, options)
+    return {} if (a == nil && b == nil) || (a != nil && a == b)
+
+    if a.is_a?(String) && b.is_a?(String) && (options == :text)
+      DiffMatchPatch.new.tap { |dmp| return dmp.patch_toText(dmp.patch_make(a, b)) }
+    end
+
+    if a.is_a?(Hash) && b.is_a?(Hash)
+      (a.keys | b.keys).each_with_object({}) do |key, hsh|
+        next if (x = a[key]) == (y = b[key])
+        current_option = options[key.to_s] || options[key.to_sym] || :simple
+
+        if current_option == :text && x.is_a?(String) && y.is_a?(String)
+          :text
+        elsif current_option == :object && array_of_hashes?(x) && array_of_hashes?(y)
+          options.each_with_object({}) do |(k, v), h|
+            h[k.to_s.gsub("#{key.to_s}.", "")] = v if k.to_s.start_with? "#{key.to_s}."
+          end
+        end.tap { |opts| hsh[key] = calc x, y, opts }
+      end
     elsif array_of_hashes?(a) && array_of_hashes?(b)
       x, y = ary_2_hsh(a), ary_2_hsh(b)
-      id_key_name = a.first.has_key?(:id) ? :id : "id"
-
-      (x.keys | y.keys).map do |k|
-        get_delta(x[k], y[k], options).merge id_key_name => k
-      end.reject { |e| e.count == 1 }
+      key = a.first.has_key?(:id) ? :id : "id"
+      (x.keys | y.keys).map { |k| calc(x[k] || {}, y[k] || {}, options).merge key => k }.reject { |e| e.count == 1 }
     else
       [a, b]
     end
   end
 
-  # TODO: Strategies
-  def apply(a, delta)
-    if delta.empty?
-      a
-    elsif a.is_a?(Hash)
-      apply_hash_delta(a, delta)
-    elsif array_of_hashes?(a)
-      x, d = ary_2_hsh(a), ary_2_hsh(delta)
-      id_key_name = a.first.has_key?(:id) ? :id : "id"
+  def apply(a, delta, options={})
+    return a if delta.empty? || delta == nil
 
-      d.each { |k, v| x[k] = apply_hash_delta (x[k] || {}), v }
+    if options == :text && a.is_a?(String)
+      DiffMatchPatch.new.tap { |dmp| return dmp.patch_apply(dmp.patch_fromText(delta), a).first }
+    elsif a.is_a?(Hash)
+      delta.each_with_object(a.dup) do |(k, v), result|
+        (result[k] = apply(result[k], v, options)).tap do |new_value|
+          result.delete(k) if new_value == nil
+        end
+      end
+    elsif array_of_hashes?(a)
+      id_key_name = a.first.has_key?(:id) ? :id : "id"
+      x, d = ary_2_hsh(a), ary_2_hsh(delta)
+
+      d.each { |k, v| x[k] = apply(x[k] || {}, v, options) }
       x.map  { |k, v| v.merge id_key_name => k }.reject { |e| e.count == 1 }
     else
-
-      if method == :text && a.is_a?(String)
-        patch = diff_match_path.patch_fromText(delta)
-        diff_match_path.patch_apply(patch, a).first
-      else
-        a == delta.last ? delta.first : delta.last
-      end
+      a == delta.last ? delta.first : delta.last
     end
   end
 
   private
-
-  def diff_match_path
-    @diff_match_path ||= DiffMatchPatch.new
-  end
-
-  def get_delta(a, b, options={})
-    c, d = a == nil ? {} : a, b == nil ? {} : b
-
-    (c.keys | d.keys).each_with_object({}) do |key, hsh|
-      x, y = c[key], d[key]
-
-      current_option = options[key.to_s] || options[key.to_sym] || :simple
-
-      if x != y
-        if current_option == :text && x.is_a?(String) && y.is_a?(String)
-          patch = diff_match_path.patch_make(x, y)
-          hsh[key] = diff_match_path.patch_toText patch
-        elsif current_option == :object && x.is_a?(Hash) && y.is_a?(Hash)
-          hsh[key] = get_delta(x, y)
-
-        elsif current_option == :object && array_of_hashes?(x) && array_of_hashes?(y)
-
-          opts = options.each_with_object({}) do |(ok, ov), hsh|
-            if ok.to_s.start_with? "#{key.to_s}."
-              subkey = ok.to_s.gsub "#{key.to_s}.", ""
-              hsh[subkey] = ov
-            end
-          end
-
-          #TODO: Remove duplication
-          p, k = ary_2_hsh(x), ary_2_hsh(y)
-          id_key_name = x.first.has_key?(:id) ? :id : "id"
-
-          hsh[key] = (p.keys | k.keys).map do |kk|
-            get_delta(p[kk], k[kk], opts).merge id_key_name => kk
-          end.reject { |e| e.count == 1 }
-        else
-          hsh[key] = [x, y]
-        end
-      end
-    end
-  end
 
   def ary_2_hsh(ary)
     ary.each_with_object({}) do |e, hsh|
@@ -108,25 +63,5 @@ class Distinctio::Base
 
   def array_of_hashes?(ary)
     ary.is_a?(Array) && ary.all? { |o| o.is_a?(Hash) && (o.has_key?(:id) || o.has_key?("id")) }
-  end
-
-  def apply_hash_delta(hsh, delta)
-    hsh.dup.tap do |result|
-      delta.each do |k, v|
-        if method == :text && result[k].is_a?(String)
-          patch = diff_match_path.patch_fromText(v)
-          result[k] = diff_match_path.patch_apply(patch, result[k]).first
-        else
-          x, y = v.first, v.last
-          (result[k] == x ? y : x).tap do |new_value|
-            if new_value != nil
-              result[k] = new_value
-            else
-              result.delete(k)
-            end
-          end
-        end
-      end
-    end
   end
 end
