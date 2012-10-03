@@ -111,6 +111,83 @@ describe "simple diff" do
         specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text }).should == delta }
         specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text }).should == b }
       end
+
+      context 'two-level nesting' do
+        let(:a) { {
+            :name => 'Page',
+            :page_parts => [
+              { :id => 1, :body => "Lorem ipsum", :elems => [
+                { :id => 1, :value => 'value' }
+              ] },
+              { :id => 2, :body => "Sit amet", :elems => [
+                { :id => 2, :value => 'another value' }
+              ] }
+            ]
+        } }
+        let(:b) { {
+            :name => 'Page',
+            :page_parts => [
+              { :id => 1, :body => "Lorem", :elems => [
+                { :id => 1, :value => 'simple value' }
+              ] },
+              { :id => 2, :body => "Sit", :elems => [
+                { :id => 2, :value => 'another value' }
+              ] }
+            ]
+        } }
+
+        let(:delta) { {
+          :page_parts=>[
+            {
+              :body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n",
+              :elems=>[
+                {:value=>["value", "simple value"], :id=>1}
+              ],
+              :id=>1
+            },
+            {
+              :body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n",
+              :id=>2
+            }
+          ]
+        } }
+        subject { Distinctio::Base.new }
+
+        specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text }).should == delta }
+        specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text }).should == b }
+      end
+
+
+      context 'two-level nesting' do
+        let(:a) { {
+            :name => 'Page',
+            :page_parts => [
+              { :id => 1, :body => "Lorem ipsum", :elems => [
+                { :id => 1, :value => 'value' }
+              ] },
+              { :id => 2, :body => "Sit amet", :elems => [
+                { :id => 2, :value => 'another value' }
+              ] }
+            ]
+        } }
+        let(:b) { {
+            :name => 'Page',
+            :page_parts => [
+              { :id => 1, :body => "Lorem", :elems => [
+                { :id => 1, :value => 'simple value' }
+              ] },
+              { :id => 2, :body => "Sit", :elems => [
+                { :id => 2, :value => 'another value' }
+              ] }
+            ]
+        } }
+
+        let(:delta) { {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[{:value=>"@@ -1,5 +1,12 @@\n+simple \n value\n", :id=>1}], :id=>1}, {:body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n", :id=>2}]} }
+        subject { Distinctio::Base.new }
+
+        specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text }).should == delta }
+        specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text }).should == b }
+      end
     end
   end
 end
