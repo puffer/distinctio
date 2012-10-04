@@ -1,45 +1,88 @@
 require 'spec_helper.rb'
 
 describe "simple diff" do
+  subject { Distinctio::Base.new }
+
   describe "text method" do
-    subject { Distinctio::Base.new }
 
     context "a and b are hashes" do
-      context "one entry as text" do
-        let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
-        let(:b) { { :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
+      context "one entry as text, whole hash as an object" do
+        let(:a) { { :id => 1, :name => 'Nancy', :message => 'hello, world!'} }
+        let(:b) { { :id => 1, :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
         let(:delta) { {
           :message => "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n",
           :extra => [nil, "Extra."]
         } }
-        let(:opts) { { :message => :text } }
+        let(:opts) { { :root => :object, :message => :text } }
 
         specify { subject.calc(a, b, opts).should == delta }
         specify { subject.apply(a, delta, opts).should == b }
       end
 
-      context "one entry as text, another one as an object" do
+      context "one entry as text, whole hash as a hash" do
+        let(:a) { { :id => 1, :name => 'Nancy', :message => 'hello, world!'} }
+        let(:b) { { :id => 1, :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
+        let(:delta) { [
+          {:id=>1, :name=>"Nancy", :message=>"hello, world!"},
+          {:id=>1, :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
+        ] }
+        let(:opts) { { :root => :simple, :message => :text } }
+
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
+      end
+
+      context "entries have no id, whole hash as an object" do
         let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
-        let(:b) { { :name => 'Andy', :message => 'The world is mine!', :extra => 'Extra.'} }
+        let(:b) { { :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
+        let(:delta) { [
+          { :name=>"Nancy", :message=>"hello, world!"},
+          { :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
+        ] }
+        let(:opts) { { :root => :object, :message => :text } }
+
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
+      end
+
+      context "one entry as text, whole hash as a hash" do
+        let(:a) { { :id => 1, :name => 'Nancy', :message => 'hello, world!'} }
+        let(:b) { { :id => 2, :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
+        let(:delta) { [
+          {:id=>1, :name=>"Nancy", :message=>"hello, world!"},
+          {:id=>2, :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
+        ] }
+        let(:opts) { { :root => :object, :message => :text } }
+
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
+      end
+    end
+
+    context do
+
+      context "one entry as text, another one as an object" do
+        let(:a) { { :id =>1, :name => 'Nancy', :message => 'hello, world!'} }
+        let(:b) { { :id =>1, :name => 'Andy', :message => 'The world is mine!', :extra => 'Extra.'} }
         let(:delta) { {
           :message => "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n",
           :extra => [nil, "Extra."],
           :name => ["Nancy", "Andy"]
         } }
-        let(:opts) { { :message => :text, :name => :object } }
+        let(:opts) { { :root => :object, :message => :text, :name => :object } }
 
         specify { subject.calc(a, b, opts).should == delta }
         specify { subject.apply(a, delta, opts).should == b }
       end
 
       context "with keys as symbols & strings" do
-        let(:a) { { 'name' => 'Nancy', :message => 'hello, world!'} }
-        let(:b) { { 'name' => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
+        let(:a) { { :id => 1, 'name' => 'Nancy', :message => 'hello, world!'} }
+        let(:b) { { :id => 1, 'name' => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
         let(:delta) { {
           :message => "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n",
           :extra => [nil, "Extra."]
         } }
-        let(:opts) { { :message => :text, :name => :object } }
+        let(:opts) { { :root => :object, :message => :text, :name => :object } }
 
         specify { subject.calc(a, b, opts).should == delta }
         specify { subject.apply(a, delta, opts).should == b }
@@ -56,8 +99,97 @@ describe "simple diff" do
     end
 
     context "with nested hashes" do
+      context 'one-level nested hash' do
+        let(:a) { {
+            :name => 'Page',
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum", :name => "Heading" }
+        } }
+        let(:b) { {
+            :name => 'Page',
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum dolor" }
+        } }
+
+        let(:delta) { subject.calc(a, b) }
+        specify { subject.apply(a, delta).should == b }
+      end
+
+      context 'one-level nested hash' do
+        let(:a) { {
+            :id => 1,
+            :name => 'Page',
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum", :name => "Heading" }
+        } }
+        let(:b) { {
+            :id => 1,
+            :name => 'Page',
+            :page_part_attributes => { :id => 2, :body => "Lorem ipsum dolor" }
+        } }
+        let(:delta) {
+          {
+            :page_part_attributes=>[
+              {:id=>1, :body=>"Lorem ipsum", :name=>"Heading"},
+              {:id=>2, :body=>"Lorem ipsum dolor"}
+            ]
+          }
+        }
+        specify { subject.calc(a, b, {:root => :object}).should == delta }
+        specify { subject.apply(a, delta, {:root => :object}).should == b }
+      end
+
+      context 'one-level nested hash' do
+        let(:a) { {
+            :id => 1,
+            :name => 'Page',
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum", :name => "Heading" }
+        } }
+        let(:b) { {
+            :id => 1,
+            :name => 'Page',
+            :page_part_attributes => { :id => 2, :body => "Lorem ipsum dolor" }
+        } }
+        let(:delta) {
+          {
+            :page_part_attributes=>[
+              {:id=>1, :body=>"Lorem ipsum", :name=>"Heading"},
+              {:id=>2, :body=>"Lorem ipsum dolor"}
+            ]
+          }
+        }
+        let(:opts) { { :root => :object, :page_part_attributes => :object } }
+
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
+      end
+
+      context 'one-level nested hash' do
+        let(:a) { {
+            :id => 1,
+            :name => 'Page',
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum", :name => "Heading" }
+        } }
+        let(:b) { {
+            :id => 1,
+            :name => 'Page',
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum dolor", :entry => { :id => 1, :name => "Name" } }
+        } }
+
+        let(:delta) {
+          {
+            :page_part_attributes=>{
+              :body=>"@@ -4,8 +4,14 @@\n em ipsum\n+ dolor\n",
+              :name=>["Heading", nil],
+              :entry=>[nil, {:id=>1, :name=>"Name"}]
+            }
+          }
+        }
+        let(:opts) { { :root => :object, :page_part_attributes => :object, 'page_part_attributes.body' => :text } }
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
+      end
+
       context 'one-level nesting' do
         let(:a) { {
+            :id => 1,
             :name => 'Page',
             :page_parts => [
               { :id => 1, :body => "Lorem ipsum" },
@@ -65,6 +197,7 @@ describe "simple diff" do
             ]
         } }
         let(:b) { {
+            :id => 1,
             :name => 'Page',
             :page_parts => [
               { :id => 1, :body => "Lorem ipsum dolor" },
@@ -78,14 +211,14 @@ describe "simple diff" do
             { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", :id=>2 }
           ]
         } }
-        subject { Distinctio::Base.new }
-
-        specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text }).should == delta }
-        specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text }).should == b }
+        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
       end
 
       context 'one-level nesting with ids as strings and symbols' do
         let(:a) { {
+            :id => 1,
             :name => 'Page',
             :page_parts => [
               { 'id' => 1, :body => "Lorem ipsum" },
@@ -93,6 +226,7 @@ describe "simple diff" do
             ]
         } }
         let(:b) { {
+            :id => 1,
             :name => 'Page',
             :page_parts => [
               { 'id' => 1, :body => "Lorem ipsum dolor" },
@@ -106,14 +240,14 @@ describe "simple diff" do
             { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", 'id'=>2 }
           ]
         } }
-        subject { Distinctio::Base.new }
-
-        specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text }).should == delta }
-        specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text }).should == b }
+        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
       end
 
       context 'two-level nesting' do
         let(:a) { {
+            :id => 1,
             :name => 'Page',
             :page_parts => [
               { :id => 1, :body => "Lorem ipsum", :elems => [
@@ -125,6 +259,7 @@ describe "simple diff" do
             ]
         } }
         let(:b) { {
+            :id => 1,
             :name => 'Page',
             :page_parts => [
               { :id => 1, :body => "Lorem", :elems => [
@@ -136,30 +271,18 @@ describe "simple diff" do
             ]
         } }
 
-        let(:delta) { {
-          :page_parts=>[
-            {
-              :body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n",
-              :elems=>[
-                {:value=>["value", "simple value"], :id=>1}
-              ],
-              :id=>1
-            },
-            {
-              :body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n",
-              :id=>2
-            }
-          ]
-        } }
-        subject { Distinctio::Base.new }
+        let(:delta) {
+          {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[[{:value=>"value", :id=>1}, {:value=>"simple value", :id=>1}]]}]}
+        }
+        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
 
-        specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text }).should == delta }
-        specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text }).should == b }
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
       end
-
 
       context 'two-level nesting' do
         let(:a) { {
+          :id => 1,
             :name => 'Page',
             :page_parts => [
               { :id => 1, :body => "Lorem ipsum", :elems => [
@@ -171,6 +294,7 @@ describe "simple diff" do
             ]
         } }
         let(:b) { {
+          :id => 1,
             :name => 'Page',
             :page_parts => [
               { :id => 1, :body => "Lorem", :elems => [
@@ -182,11 +306,21 @@ describe "simple diff" do
             ]
         } }
 
-        let(:delta) { {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[{:value=>"@@ -1,5 +1,12 @@\n+simple \n value\n", :id=>1}], :id=>1}, {:body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n", :id=>2}]} }
-        subject { Distinctio::Base.new }
+        let(:delta) {
+          {
+            :page_parts=>[
+              {:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n",
+                :elems=>[{:value=>"@@ -1,5 +1,12 @@\n+simple \n value\n", :id=>1}], :id=>1},
 
-        specify { subject.calc(a, b, { :page_parts => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text }).should == delta }
-        specify { subject.apply(a, delta, { :page_parts => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text }).should == b }
+              {:body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n", :id=>2}]}
+        }
+        #{:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[]}]}
+        #let(:delta) {
+        #  {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[[{:value=>"value", :id=>1}, {:value=>"simple value", :id=>1}]]}]}
+        #}
+        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.elems' => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text } }
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b }
       end
     end
   end
