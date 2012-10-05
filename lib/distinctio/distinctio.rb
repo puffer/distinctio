@@ -2,7 +2,7 @@ require 'diff_match_patch'
 
 class Distinctio::Base
   def calc(a, b, options={})
-    if (a == nil && b == nil) || (a != nil && a == b)
+    if a == b
       {}
     elsif options == :text && [a, b].all?{ |s| s.is_a?(String) }
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_toText(dmp.patch_make(a, b)) }
@@ -47,10 +47,8 @@ class Distinctio::Base
       a
     elsif options == :text && a.is_a?(String)
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_apply(dmp.patch_fromText(delta), a).first }
-    elsif a.is_a?(Hash) && is_object_hash?(a) && options[:root] == :object
-      if delta.is_a?(Array)
-        return a == delta.last ? delta.first : delta.last
-      end
+    elsif options[:root] == :object && is_object_hash?(a)
+      return apply(a, delta) if delta.is_a?(Array)
 
       delta.each_with_object(a.dup) do |(k, v), result|
         current_option = options[k.to_s] || options[k.to_sym] || :simple
@@ -63,9 +61,9 @@ class Distinctio::Base
           end
         end.tap { |opts| opts.merge!({ :root => :object }) if current_option == :object }
 
-        result.delete(k) if (result[k] = apply(result[k], v, opts)) == nil
-      end
-    elsif array_of_hashes?(a) && options[:root] == :object
+        result[k] = apply(result[k], v, opts)
+      end.reject{ |k, v| v == nil }
+    elsif options[:root] == :object && array_of_hashes?(a)
       key = a.first.has_key?(:id) ? :id : "id"
       ary_2_hsh(a).tap do |entries|
         ary_2_hsh(delta).each do |k, v|
@@ -91,7 +89,7 @@ class Distinctio::Base
     ary.is_a?(Array) && ary.all? { |o| o.is_a?(Hash) && is_object_hash?(o) }
   end
 
-  def is_object_hash? hsh
+  def is_object_hash?(hsh)
     hsh.is_a?(Hash) && (hsh.has_key?(:id) || hsh.has_key?("id"))
   end
 end
