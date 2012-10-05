@@ -4,9 +4,9 @@ class Distinctio::Base
   def calc(a, b, options={})
     if (a == nil && b == nil) || (a != nil && a == b)
       {}
-    elsif a.is_a?(String) && b.is_a?(String) && (options == :text)
+    elsif options == :text && [a, b].all?{ |s| s.is_a?(String) }
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_toText(dmp.patch_make(a, b)) }
-    elsif a.is_a?(Hash) && b.is_a?(Hash) && is_object_hash?(a) && is_object_hash?(b) && options[:root] == :object
+    elsif options[:root] == :object && [a, b].all?{ |h| is_object_hash?(h) }
       a_id, b_id = a[:id] || a["id"], b[:id] || b["id"]
 
       return [a, b] if (a_id != nil) && a_id != b_id
@@ -26,7 +26,7 @@ class Distinctio::Base
 
         hsh[key] = calc(x, y, opts)
       end
-    elsif array_of_hashes?(a) && array_of_hashes?(b) && options[:root] == :object
+    elsif options[:root] == :object && [a, b].all?{ |h| array_of_hashes?(h) }
       x, y = ary_2_hsh(a), ary_2_hsh(b)
       key = a.first.has_key?(:id) ? :id : "id"
       anti_key = (key == 'id') ? :id : "id"
@@ -92,6 +92,6 @@ class Distinctio::Base
   end
 
   def is_object_hash? hsh
-    hsh.has_key?(:id) || hsh.has_key?("id")
+    hsh.is_a?(Hash) && (hsh.has_key?(:id) || hsh.has_key?("id"))
   end
 end
