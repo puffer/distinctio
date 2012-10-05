@@ -22,22 +22,20 @@ class Distinctio::Base
           options.each_with_object({}) do |(k, v), h|
             h[k.to_s.gsub("#{key.to_s}.", "")] = v if k.to_s.start_with? "#{key.to_s}."
           end
-        end
-        opts.merge!({ :root => :object }) if current_option == :object
+        end.tap { |opts| opts.merge!({ :root => :object }) if current_option == :object }
 
         hsh[key] = calc(x, y, opts)
       end
-    elsif array_of_hashes?(a) && array_of_hashes?(b)
+    elsif array_of_hashes?(a) && array_of_hashes?(b) && options[:root] == :object
       x, y = ary_2_hsh(a), ary_2_hsh(b)
       key = a.first.has_key?(:id) ? :id : "id"
-      anti_key = a.first.has_key?('id') ? :id : "id"
+      anti_key = (key == 'id') ? :id : "id"
 
       (x.keys | y.keys).map do |k|
-        p = (x[k] || {})
-        p.merge! key => k if p[anti_key] == nil
-        r = (y[k] || {})
-        r.merge! key => k if r[anti_key] == nil
-        calc(p, r, options)#.merge key => k
+        p = (x[k] || {}).tap { |h| h.merge!({key => k}) if h[anti_key] == nil }
+        r = (y[k] || {}).tap { |h| h.merge!({key => k}) if h[anti_key] == nil }
+
+        calc(p, r, options).merge({key => k})
       end.reject { |e| e.count == 1 }
     else
       [a, b]
@@ -63,23 +61,18 @@ class Distinctio::Base
           options.each_with_object({}) do |(ok, ov), h|
             h[ok.to_s.gsub("#{k.to_s}.", "")] = ov if ok.to_s.start_with? "#{k.to_s}."
           end
-        end
-
-        opts.merge!({ :root => :object }) if current_option == :object
+        end.tap { |opts| opts.merge!({ :root => :object }) if current_option == :object }
 
         result.delete(k) if (result[k] = apply(result[k], v, opts)) == nil
       end
-    elsif array_of_hashes?(a)
-      id_key_name = a.first.has_key?(:id) ? :id : "id"
-      x, d = ary_2_hsh(a), ary_2_hsh(delta)
-
-      d.each do |k, v|
-        p = (x[k] || {})
-        p = p.merge! id_key_name => k if p['id'] == nil
-
-        x[k] = apply(p, v, options)
-      end
-      x.map  { |k, v| v }.reject { |e| e.count == 1 }
+    elsif array_of_hashes?(a) && options[:root] == :object
+      key = a.first.has_key?(:id) ? :id : "id"
+      ary_2_hsh(a).tap do |entries|
+        ary_2_hsh(delta).each do |k, v|
+          entry = (entries[k] || {}).tap { |p| p.merge!({ key => k }) if p['id'] == nil }
+          entries[k] = apply(entry, v, options)
+        end
+      end.values.reject { |e| e.count == 1 }
     else
       a == delta.last ? delta.first : delta.last
     end

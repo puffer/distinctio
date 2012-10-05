@@ -271,9 +271,20 @@ describe "simple diff" do
             ]
         } }
 
-        let(:delta) {
-          {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[[{:value=>"value", :id=>1}, {:value=>"simple value", :id=>1}]]}]}
-        }
+        let(:delta) { {
+          :page_parts=>[
+            {
+              :body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n",
+              :elems=>[
+                [{:id=>1, :value=>"value"}],
+                [{:id=>1, :value=>"simple value"}]
+              ], :id=>1
+            }, {
+              :body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n",
+              :id=>2
+            }
+          ]
+        } }
         let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
 
         specify { subject.calc(a, b, opts).should == delta }

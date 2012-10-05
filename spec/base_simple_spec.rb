@@ -15,14 +15,20 @@ describe "simple diff" do
         let(:a) { { :name => 'txt' } }
         let(:b) { { :name => 'txt' } }
         let(:delta) { {} }
-        it_should_correctly "calc and apply difference"
+
+        specify { subject.calc(a, b).should == delta }
+        specify { subject.apply(a, delta).should == b }
+        specify { subject.apply(b, delta).should == a }
       end
 
       context do
         let(:a) { { :name => 'txt' } }
         let(:b) { { } }
-        let(:delta) { { :name => ['txt', nil] } }
-        it_should_correctly "calc and apply difference"
+        let(:delta) { [{:name=>"txt"}, {}] }
+
+        specify { subject.calc(a, b).should == delta }
+        specify { subject.apply(a, delta).should == b }
+        specify { subject.apply(b, delta).should == a }
       end
 
       context do
@@ -33,29 +39,38 @@ describe "simple diff" do
       end
 
       context do
-        let(:a) { { :name => 'txt' } }
-        let(:b) { { :name => 'pdf' } }
+        let(:a) { { :id => 1, :name => 'txt' } }
+        let(:b) { { :id => 1, :name => 'pdf' } }
         let(:delta) { { :name => ['txt', 'pdf'] } }
-        it_should_correctly "calc and apply difference"
+
+        specify { subject.calc(a, b, { :root => :object}).should == delta }
+        specify { subject.apply(a, delta, { :root => :object}).should == b }
+        specify { subject.apply(b, delta, { :root => :object}).should == a }
       end
 
       context do
-        let(:a) { { :key => 0 } }
-        let(:b) { { :key => 1 } }
+        let(:a) { { :id => 1, :key => 0 } }
+        let(:b) { { :id => 1, :key => 1 } }
         let(:delta) { { :key => [0, 1] } }
-        it_should_correctly "calc and apply difference"
+
+        specify { subject.calc(a, b, { :root => :object}).should == delta }
+        specify { subject.apply(a, delta, { :root => :object}).should == b }
+        specify { subject.apply(b, delta, { :root => :object}).should == a }
       end
 
       context do
-        let(:a) { { :key => [1, 2] } }
-        let(:b) { { :key => [2, 3] } }
+        let(:a) { { :id => 1, :key => [1, 2] } }
+        let(:b) { { :id => 1, :key => [2, 3] } }
         let(:delta) { { :key => [[1, 2], [2, 3]] } }
-        it_should_correctly "calc and apply difference"
+
+        specify { subject.calc(a, b, { :root => :object}).should == delta }
+        specify { subject.apply(a, delta, { :root => :object}).should == b }
+        specify { subject.apply(b, delta, { :root => :object}).should == a }
       end
 
       context do
-        let(:a) { { :name => 'txt', :body => 'hello!', :count => 5, :stats => [3, 7], :data => 'data' } }
-        let(:b) { { :name => 'txt', :body => 'goodbye!', :count => 7, :stats => [6, 7], :code => 'code' } }
+        let(:a) { { :id => 1, :name => 'txt', :body => 'hello!', :count => 5, :stats => [3, 7], :data => 'data' } }
+        let(:b) { { :id => 1, :name => 'txt', :body => 'goodbye!', :count => 7, :stats => [6, 7], :code => 'code' } }
         let(:delta) { {
           :body =>  ['hello!', 'goodbye!'],
           :count => [5, 7],
@@ -63,7 +78,10 @@ describe "simple diff" do
           :data =>  ['data', nil],
           :code =>  [nil, 'code']
         } }
-        it_should_correctly "calc and apply difference"
+
+        specify { subject.calc(a, b, { :root => :object}).should == delta }
+        specify { subject.apply(a, delta, { :root => :object}).should == b }
+        specify { subject.apply(b, delta, { :root => :object}).should == a }
       end
     end
 
@@ -76,16 +94,17 @@ describe "simple diff" do
           { :id => 2, :name => ['hello', 'world'] },
           { :id => 3, :name => [nil, 'goodbye'] }
         ] }
+        let(:opts) { {:root => :object} }
 
-        specify { subject.calc(a, b).should == delta }
+        specify { subject.calc(a, b, opts).should == delta }
 
-        specify { subject.apply(a, delta).should include({:id => 2, :name => 'world'}) }
-        specify { subject.apply(a, delta).should include({:id => 1, :name => 'hello'}) }
-        specify { subject.apply(a, delta).should include({:id => 3, :name => 'goodbye'}) }
+        specify { subject.apply(a, delta, opts).should include({:id => 2, :name => 'world'}) }
+        specify { subject.apply(a, delta, opts).should include({:id => 1, :name => 'hello'}) }
+        specify { subject.apply(a, delta, opts).should include({:id => 3, :name => 'goodbye'}) }
 
-        specify { subject.apply(b, delta).should include({:id => 1, :name => 'world'}) }
-        specify { subject.apply(b, delta).should include({:id => 2, :name => 'hello'}) }
-        specify { subject.apply(b, delta).should_not include({:id => 3, :name => 'goodbye'}) }
+        specify { subject.apply(b, delta, opts).should include({:id => 1, :name => 'world'}) }
+        specify { subject.apply(b, delta, opts).should include({:id => 2, :name => 'hello'}) }
+        specify { subject.apply(b, delta, opts).should_not include({:id => 3, :name => 'goodbye'}) }
       end
 
       context "as a string" do
@@ -96,16 +115,16 @@ describe "simple diff" do
           { "id" => 2, :name => ['hello', 'world'] },
           { "id" => 3, :name => [nil, 'goodbye'] }
         ] }
+        let(:opts) { {:root => :object} }
+        specify { subject.calc(a, b, opts).should == delta }
 
-        specify { subject.calc(a, b).should == delta }
+        specify { subject.apply(a, delta, opts).should include({"id" => 2, :name => 'world'}) }
+        specify { subject.apply(a, delta, opts).should include({"id" => 1, :name => 'hello'}) }
+        specify { subject.apply(a, delta, opts).should include({"id" => 3, :name => 'goodbye'}) }
 
-        specify { subject.apply(a, delta).should include({"id" => 2, :name => 'world'}) }
-        specify { subject.apply(a, delta).should include({"id" => 1, :name => 'hello'}) }
-        specify { subject.apply(a, delta).should include({"id" => 3, :name => 'goodbye'}) }
-
-        specify { subject.apply(b, delta).should include({"id" => 1, :name => 'world'}) }
-        specify { subject.apply(b, delta).should include({"id" => 2, :name => 'hello'}) }
-        specify { subject.apply(b, delta).should_not include({"id" => 3, :name => 'goodbye'}) }
+        specify { subject.apply(b, delta, opts).should include({"id" => 1, :name => 'world'}) }
+        specify { subject.apply(b, delta, opts).should include({"id" => 2, :name => 'hello'}) }
+        specify { subject.apply(b, delta, opts).should_not include({"id" => 3, :name => 'goodbye'}) }
       end
 
       context "as a string and a symbol" do
@@ -116,16 +135,17 @@ describe "simple diff" do
           { :id => 2, :name => ['hello', 'world'] },
           { :id => 3, :name => [nil, 'goodbye'] }
         ] }
+        let(:opts) { { :root => :object } }
 
-        specify { subject.calc(a, b).should == delta }
+        specify { subject.calc(a, b, opts).should == delta }
 
-        specify { subject.apply(a, delta).should include({:id => 2, :name => 'world'}) }
-        specify { subject.apply(a, delta).should include({:id => 1, :name => 'hello'}) }
-        specify { subject.apply(a, delta).should include({:id => 3, :name => 'goodbye'}) }
+        specify { subject.apply(a, delta, opts).should include({:id => 2, :name => 'world'}) }
+        specify { subject.apply(a, delta, opts).should include({:id => 1, :name => 'hello'}) }
+        specify { subject.apply(a, delta, opts).should include({:id => 3, :name => 'goodbye'}) }
 
-        specify { subject.apply(b, delta).should include({"id" => 1, :name => 'world'}) }
-        specify { subject.apply(b, delta).should include({"id" => 2, :name => 'hello'}) }
-        specify { subject.apply(b, delta).should_not include({"id" => 3, :name => 'goodbye'}) }
+        specify { subject.apply(b, delta, opts).should include({"id" => 1, :name => 'world'}) }
+        specify { subject.apply(b, delta, opts).should include({"id" => 2, :name => 'hello'}) }
+        specify { subject.apply(b, delta, opts).should_not include({"id" => 3, :name => 'goodbye'}) }
       end
     end
 
