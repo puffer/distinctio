@@ -1,5 +1,3 @@
-require 'diff_match_patch'
-
 class Distinctio::Base
   def calc(a, b, options={})
     if a == b

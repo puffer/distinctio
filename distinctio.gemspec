@@ -1,7 +1,10 @@
-require File.expand_path('../lib/distinctio/version.rb', __FILE__)
+# -*- encoding: utf-8 -*-
+$:.push File.expand_path("../lib", __FILE__)
+require "distinctio/version"
 
 Gem::Specification.new do |gem|
-  gem.authors       = ["Andrew Gridnev,Arkadiy Zabazhanov"]
+  gem.name          = "distinctio"
+  gem.authors       = ["Andrew Gridnev", "Arkadiy Zabazhanov"]
   gem.description   = %q{Model-agnostic diff framework.}
   gem.summary       = %q{}
   gem.homepage      = "https://github.com/puffer/distinctio"
@@ -13,6 +16,8 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = Distinctio::VERSION
 
-  gem.add_development_dependency 'rspec', '~> 2.11.0'
-  gem.add_development_dependency 'diff_match_patch'
+  gem.add_dependency 'diff_match_patch'
+
+  gem.add_development_dependency "rake"
+  gem.add_development_dependency "rspec"
 end
