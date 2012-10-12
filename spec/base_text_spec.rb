@@ -13,10 +13,10 @@ describe "simple diff" do
           :message => "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n",
           :extra => [nil, "Extra."]
         } }
-        let(:opts) { { :root => :object, :message => :text } }
+        let(:opts) { { :message => :text } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context "one entry as text, whole hash as a hash" do
@@ -69,10 +69,10 @@ describe "simple diff" do
           :extra => [nil, "Extra."],
           :name => ["Nancy", "Andy"]
         } }
-        let(:opts) { { :root => :object, :message => :text, :name => :object } }
+        let(:opts) { { :message => :text, :name => :object } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context "with keys as symbols & strings" do
@@ -84,8 +84,8 @@ describe "simple diff" do
         } }
         let(:opts) { { :root => :object, :message => :text, :name => :object } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context "a and b are strings" do
@@ -132,8 +132,8 @@ describe "simple diff" do
             ]
           }
         }
-        specify { subject.calc(a, b, {:root => :object}).should == delta }
-        specify { subject.apply(a, delta, {:root => :object}).should == b }
+        specify { subject.calc(a, b, :object).should == delta }
+        specify { subject.apply(a, delta, :object).should == b }
       end
 
       context 'one-level nested hash' do
@@ -155,10 +155,10 @@ describe "simple diff" do
             ]
           }
         }
-        let(:opts) { { :root => :object, :page_part_attributes => :object } }
+        let(:opts) { { :page_part_attributes => :simple } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context 'one-level nested hash' do
@@ -182,9 +182,9 @@ describe "simple diff" do
             }
           }
         }
-        let(:opts) { { :root => :object, :page_part_attributes => :object, 'page_part_attributes.body' => :text } }
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        let(:opts) { { :page_part_attributes => :object, 'page_part_attributes.body' => :text } }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context 'one-level nesting' do
@@ -211,9 +211,9 @@ describe "simple diff" do
             { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", :id=>2 }
           ]
         } }
-        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        let(:opts) { { :page_parts => :object, 'page_parts.body' => :text } }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context 'one-level nesting with ids as strings and symbols' do
@@ -240,9 +240,9 @@ describe "simple diff" do
             { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", 'id'=>2 }
           ]
         } }
-        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        let(:opts) { { :page_parts => :object, 'page_parts.body' => :text } }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context 'two-level nesting' do
@@ -285,10 +285,10 @@ describe "simple diff" do
             }
           ]
         } }
-        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.body' => :text } }
+        let(:opts) { { :page_parts => :object, 'page_parts.body' => :text } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context 'two-level nesting' do
@@ -329,9 +329,9 @@ describe "simple diff" do
         #let(:delta) {
         #  {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[[{:value=>"value", :id=>1}, {:value=>"simple value", :id=>1}]]}]}
         #}
-        let(:opts) { { :root => :object, :page_parts => :object, 'page_parts.elems' => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text } }
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        let(:opts) { { :page_parts => :object, 'page_parts.elems' => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text } }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
     end
   end

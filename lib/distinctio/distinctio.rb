@@ -1,10 +1,12 @@
 class Distinctio::Base
-  def calc(a, b, options={})
+  def calc(a, b, *root_and_options)
+    root, options = extract_root_and_options(root_and_options)
+
     if a == b
       {}
-    elsif options == :text && [a, b].all?{ |s| s.is_a?(String) }
+    elsif root == :text && [a, b].all?{ |s| s.is_a?(String) }
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_toText(dmp.patch_make(a, b)) }
-    elsif options[:root] == :object && [a, b].all?{ |h| is_object_hash?(h) }
+    elsif root == :object && [a, b].all?{ |h| is_object_hash?(h) }
       a_id, b_id = a[:id] || a["id"], b[:id] || b["id"]
 
       return [a, b] if (a_id != nil) && a_id != b_id
@@ -14,17 +16,16 @@ class Distinctio::Base
 
         current_option = (options && options[key.to_s]) || (options && options[key.to_sym]) || :simple
 
-        opts = if current_option == :text && x.is_a?(String) && y.is_a?(String)
-          :text
+        hsh[key] = if current_option == :text && x.is_a?(String) && y.is_a?(String)
+          calc(x, y, :text)
         else
-          options.each_with_object({}) do |(k, v), h|
+          opts = options.each_with_object({}) do |(k, v), h|
             h[k.to_s.gsub("#{key.to_s}.", "")] = v if k.to_s.start_with? "#{key.to_s}."
           end
-        end.tap { |opts| opts.merge!({ :root => :object }) if current_option == :object }
-
-        hsh[key] = calc(x, y, opts)
+          calc(x, y, current_option, opts)
+        end
       end
-    elsif options[:root] == :object && [a, b].all?{ |h| array_of_hashes?(h) }
+    elsif root == :object && [a, b].all?{ |h| array_of_hashes?(h) }
       x, y = ary_2_hsh(a), ary_2_hsh(b)
       key = a.first.has_key?(:id) ? :id : "id"
       anti_key = (key == 'id') ? :id : "id"
@@ -33,40 +34,41 @@ class Distinctio::Base
         p = (x[k] || {}).tap { |h| h.merge!({key => k}) if h[anti_key] == nil }
         r = (y[k] || {}).tap { |h| h.merge!({key => k}) if h[anti_key] == nil }
 
-        calc(p, r, options).merge({key => k})
+        calc(p, r, :object, options).merge({key => k})
       end.reject { |e| e.count == 1 }
     else
       [a, b]
     end
   end
 
-  def apply(a, delta, options={})
+  def apply(a, delta, *root_and_options)
+    root, options = extract_root_and_options(root_and_options)
+
     if delta.empty? || delta == nil
       a
-    elsif options == :text && a.is_a?(String)
+    elsif root == :text && a.is_a?(String)
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_apply(dmp.patch_fromText(delta), a).first }
-    elsif options[:root] == :object && is_object_hash?(a)
-      return apply(a, delta) if delta.is_a?(Array)
+    elsif root == :object && is_object_hash?(a)
+      return apply(a, delta, root) if delta.is_a?(Array)
 
       delta.each_with_object(a.dup) do |(k, v), result|
         current_option = options[k.to_s] || options[k.to_sym] || :simple
 
-        opts = if current_option == :text && result[k].is_a?(String)
-          :text
+        result[k] = if current_option == :text && result[k].is_a?(String)
+          apply(result[k], v, :text)
         else
-          options.each_with_object({}) do |(ok, ov), h|
+          opts = options.each_with_object({}) do |(ok, ov), h|
             h[ok.to_s.gsub("#{k.to_s}.", "")] = ov if ok.to_s.start_with? "#{k.to_s}."
           end
-        end.tap { |opts| opts.merge!({ :root => :object }) if current_option == :object }
-
-        result[k] = apply(result[k], v, opts)
+          apply(result[k], v, current_option, opts)
+        end
       end.reject{ |k, v| v == nil }
-    elsif options[:root] == :object && array_of_hashes?(a)
+    elsif root == :object && array_of_hashes?(a)
       key = a.first.has_key?(:id) ? :id : "id"
       ary_2_hsh(a).tap do |entries|
         ary_2_hsh(delta).each do |k, v|
           entry = (entries[k] || {}).tap { |p| p.merge!({ key => k }) if p['id'] == nil }
-          entries[k] = apply(entry, v, options)
+          entries[k] = apply(entry, v, :object, options)
         end
       end.values.reject { |e| e.count == 1 }
     else
@@ -84,10 +86,15 @@ class Distinctio::Base
   end
 
   def array_of_hashes?(ary)
-    ary.is_a?(Array) && ary.all? { |o| o.is_a?(Hash) && is_object_hash?(o) }
+    ary.is_a?(Array) && ary.all? { |o| is_object_hash?(o) }
   end
 
   def is_object_hash?(hsh)
     hsh.is_a?(Hash) && (hsh.has_key?(:id) || hsh.has_key?("id"))
+  end
+
+  def extract_root_and_options(root_and_options)
+    return root_and_options.first || :simple,
+    root_and_options.last.is_a?(::Hash) ? root_and_options.pop : {}
   end
 end
