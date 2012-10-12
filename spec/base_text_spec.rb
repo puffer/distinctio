@@ -182,7 +182,7 @@ describe "simple diff" do
             }
           }
         }
-        let(:opts) { { :page_part_attributes => :object, 'page_part_attributes.body' => :text } }
+        let(:opts) { { :page_part_attributes => { :body => :text } } }
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }
       end
@@ -211,7 +211,7 @@ describe "simple diff" do
             { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", :id=>2 }
           ]
         } }
-        let(:opts) { { :page_parts => :object, 'page_parts.body' => :text } }
+        let(:opts) { { :page_parts => { :body => :text } } }
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }
       end
@@ -240,7 +240,7 @@ describe "simple diff" do
             { :body=>"@@ -1,8 +1,20 @@\n Sit amet\n+ consectetur\n", 'id'=>2 }
           ]
         } }
-        let(:opts) { { :page_parts => :object, 'page_parts.body' => :text } }
+        let(:opts) { { :page_parts => { :body => :text } } }
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }
       end
@@ -285,7 +285,7 @@ describe "simple diff" do
             }
           ]
         } }
-        let(:opts) { { :page_parts => :object, 'page_parts.body' => :text } }
+        let(:opts) { { :page_parts => { :body => :text } } }
 
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }
@@ -329,7 +329,7 @@ describe "simple diff" do
         #let(:delta) {
         #  {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[[{:value=>"value", :id=>1}, {:value=>"simple value", :id=>1}]]}]}
         #}
-        let(:opts) { { :page_parts => :object, 'page_parts.elems' => :object, 'page_parts.body' => :text, 'page_parts.elems.value' => :text } }
+        let(:opts) { { :page_parts => { :elems => { :value => :text }, :body => :text } } }
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }
       end

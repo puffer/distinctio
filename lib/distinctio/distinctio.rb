@@ -19,10 +19,8 @@ class Distinctio::Base
         hsh[key] = if current_option == :text && x.is_a?(String) && y.is_a?(String)
           calc(x, y, :text)
         else
-          opts = options.each_with_object({}) do |(k, v), h|
-            h[k.to_s.gsub("#{key.to_s}.", "")] = v if k.to_s.start_with? "#{key.to_s}."
-          end
-          calc(x, y, current_option, opts)
+          child_root = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
+          calc(x, y, child_root, options[key])
         end
       end
     elsif root == :object && [a, b].all?{ |h| array_of_hashes?(h) }
@@ -57,10 +55,8 @@ class Distinctio::Base
         result[k] = if current_option == :text && result[k].is_a?(String)
           apply(result[k], v, :text)
         else
-          opts = options.each_with_object({}) do |(ok, ov), h|
-            h[ok.to_s.gsub("#{k.to_s}.", "")] = ov if ok.to_s.start_with? "#{k.to_s}."
-          end
-          apply(result[k], v, current_option, opts)
+          child_root = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
+          apply(result[k], v, child_root, options[k])
         end
       end.reject{ |k, v| v == nil }
     elsif root == :object && array_of_hashes?(a)
