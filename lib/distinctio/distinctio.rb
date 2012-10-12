@@ -1,12 +1,12 @@
 class Distinctio::Base
-  def calc(a, b, *root_and_options)
-    root, options = extract_root_and_options(root_and_options)
+  def calc(a, b, *mode_and_options)
+    mode, options = extract_mode_and_options(mode_and_options)
 
     if a == b
       {}
-    elsif root == :text && [a, b].all?{ |s| s.is_a?(String) }
+    elsif mode == :text && [a, b].all?{ |s| s.is_a?(String) }
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_toText(dmp.patch_make(a, b)) }
-    elsif root == :object && [a, b].all?{ |h| is_object_hash?(h) }
+    elsif mode == :object && [a, b].all?{ |h| is_object_hash?(h) }
       a_id, b_id = a[:id] || a["id"], b[:id] || b["id"]
 
       return [a, b] if (a_id != nil) && a_id != b_id
@@ -19,11 +19,11 @@ class Distinctio::Base
         hsh[key] = if current_option == :text && x.is_a?(String) && y.is_a?(String)
           calc(x, y, :text)
         else
-          child_root = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
-          calc(x, y, child_root, options[key])
+          child_mode = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
+          calc(x, y, child_mode, options[key])
         end
       end
-    elsif root == :object && [a, b].all?{ |h| array_of_hashes?(h) }
+    elsif mode == :object && [a, b].all?{ |h| array_of_hashes?(h) }
       x, y = ary_2_hsh(a), ary_2_hsh(b)
       key = a.first.has_key?(:id) ? :id : "id"
       anti_key = (key == 'id') ? :id : "id"
@@ -39,15 +39,15 @@ class Distinctio::Base
     end
   end
 
-  def apply(a, delta, *root_and_options)
-    root, options = extract_root_and_options(root_and_options)
+  def apply(a, delta, *mode_and_options)
+    mode, options = extract_mode_and_options(mode_and_options)
 
     if delta.empty? || delta == nil
       a
-    elsif root == :text && a.is_a?(String)
+    elsif mode == :text && a.is_a?(String)
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_apply(dmp.patch_fromText(delta), a).first }
-    elsif root == :object && is_object_hash?(a)
-      return apply(a, delta, root) if delta.is_a?(Array)
+    elsif mode == :object && is_object_hash?(a)
+      return apply(a, delta, mode) if delta.is_a?(Array)
 
       delta.each_with_object(a.dup) do |(k, v), result|
         current_option = options[k.to_s] || options[k.to_sym] || :simple
@@ -55,11 +55,11 @@ class Distinctio::Base
         result[k] = if current_option == :text && result[k].is_a?(String)
           apply(result[k], v, :text)
         else
-          child_root = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
-          apply(result[k], v, child_root, options[k])
+          child_mode = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
+          apply(result[k], v, child_mode, options[k])
         end
       end.reject{ |k, v| v == nil }
-    elsif root == :object && array_of_hashes?(a)
+    elsif mode == :object && array_of_hashes?(a)
       key = a.first.has_key?(:id) ? :id : "id"
       ary_2_hsh(a).tap do |entries|
         ary_2_hsh(delta).each do |k, v|
@@ -89,8 +89,8 @@ class Distinctio::Base
     hsh.is_a?(Hash) && (hsh.has_key?(:id) || hsh.has_key?("id"))
   end
 
-  def extract_root_and_options(root_and_options)
-    return root_and_options.first || :simple,
-    root_and_options.last.is_a?(::Hash) ? root_and_options.pop : {}
+  def extract_mode_and_options(mode_and_options)
+    return mode_and_options.first || :simple,
+    mode_and_options.last.is_a?(::Hash) ? mode_and_options.pop : {}
   end
 end
