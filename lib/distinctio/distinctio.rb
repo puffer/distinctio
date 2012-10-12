@@ -14,13 +14,16 @@ class Distinctio::Base
       (a.keys | b.keys).each_with_object({}) do |key, hsh|
         next if (x = a[key]) == (y = b[key])
 
-        current_option = (options && options[key.to_s]) || (options && options[key.to_sym]) || :simple
+        opts = options[key.to_sym]
 
-        hsh[key] = if current_option == :text && x.is_a?(String) && y.is_a?(String)
+        hsh[key] = if opts == :text && x.is_a?(String) && y.is_a?(String)
           calc(x, y, :text)
+        elsif opts == :object
+          calc(x, y, :object)
+        elsif opts.is_a?(Hash)
+          calc(x, y, :object, opts)
         else
-          child_mode = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
-          calc(x, y, child_mode, options[key])
+          calc(x, y, :simple)
         end
       end
     elsif mode == :object && [a, b].all?{ |h| array_of_hashes?(h) }
@@ -47,16 +50,19 @@ class Distinctio::Base
     elsif mode == :text && a.is_a?(String)
       DiffMatchPatch.new.tap { |dmp| return dmp.patch_apply(dmp.patch_fromText(delta), a).first }
     elsif mode == :object && is_object_hash?(a)
-      return apply(a, delta, mode) if delta.is_a?(Array)
+      return apply(a, delta, :simple) if delta.is_a?(Array)
 
       delta.each_with_object(a.dup) do |(k, v), result|
-        current_option = options[k.to_s] || options[k.to_sym] || :simple
+        opts = options[k.to_sym]
 
-        result[k] = if current_option == :text && result[k].is_a?(String)
+        result[k] = if opts == :text && result[k].is_a?(String)
           apply(result[k], v, :text)
+        elsif opts == :object
+          apply(result[k], v, :object)
+        elsif opts.is_a?(Hash)
+          apply(result[k], v, :object, opts)
         else
-          child_mode = (current_option.is_a?(Hash) || current_option == :object) ? :object : :simple
-          apply(result[k], v, child_mode, options[k])
+          apply(result[k], v, :simple)
         end
       end.reject{ |k, v| v == nil }
     elsif mode == :object && array_of_hashes?(a)

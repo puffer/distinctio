@@ -26,10 +26,10 @@ describe "simple diff" do
           {:id=>1, :name=>"Nancy", :message=>"hello, world!"},
           {:id=>1, :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
         ] }
-        let(:opts) { { :root => :simple, :message => :text } }
+        let(:opts) { { :message => :text } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :simple, opts).should == delta }
+        specify { subject.apply(a, delta, :simple, opts).should == b }
       end
 
       context "entries have no id, whole hash as an object" do
@@ -39,10 +39,10 @@ describe "simple diff" do
           { :name=>"Nancy", :message=>"hello, world!"},
           { :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
         ] }
-        let(:opts) { { :root => :object, :message => :text } }
+        let(:opts) { { :message => :text } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object, opts).should == delta }
+        specify { subject.apply(a, delta, :object, opts).should == b }
       end
 
       context "one entry as text, whole hash as a hash" do
@@ -52,10 +52,9 @@ describe "simple diff" do
           {:id=>1, :name=>"Nancy", :message=>"hello, world!"},
           {:id=>2, :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
         ] }
-        let(:opts) { { :root => :object, :message => :text } }
 
-        specify { subject.calc(a, b, opts).should == delta }
-        specify { subject.apply(a, delta, opts).should == b }
+        specify { subject.calc(a, b, :object).should == delta }
+        specify { subject.apply(a, delta, :object).should == b }
       end
     end
 
@@ -82,7 +81,7 @@ describe "simple diff" do
           :message => "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n",
           :extra => [nil, "Extra."]
         } }
-        let(:opts) { { :root => :object, :message => :text, :name => :object } }
+        let(:opts) { { :message => :text, :name => :object } }
 
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }
