@@ -8,13 +8,8 @@ module Distinctio
       end
 
       def apply a, delta, options = {}
-        if delta.empty? || delta == nil
-          return a#, nil
-        else
-          a == delta.last ? delta.first : delta.last
-        #else
-        #  return a#, [a, *delta]
-        end
+        return a if delta == nil || delta.empty?
+        a == delta.last ? delta.first : delta.last
       end
 
     end

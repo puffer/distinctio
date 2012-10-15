@@ -5,109 +5,86 @@ module Distinctio
 
       def calc a, b, options = {}
         if object_hash_array?(a) && object_hash_array?(b)
-          #merge_object_hash_arrays(a, b).map do |(a, b)|
-          #  Base.calc(a, b, :object, options)
-          #end
+          key_name = a.first.has_key?(:id) ? :id : 'id'
+          key_alias = key_name.is_a?(Symbol) ? key_name.to_sym : key_name.to_s
 
-          x, y = ary_2_hsh(a), ary_2_hsh(b)
-          key = a.first.has_key?(:id) ? :id : "id"
-          anti_key = (key == 'id') ? :id : "id"
+          a, b = ary_2_hsh(a), ary_2_hsh(b)
 
-          (x.keys | y.keys).map do |k|
-            p = (x[k] || {}).tap { |h| h.merge!({key => k}) if h[anti_key] == nil }
-            r = (y[k] || {}).tap { |h| h.merge!({key => k}) if h[anti_key] == nil }
-
-            Base.calc(p, r, :object, options).merge({key => k})
-          end.reject { |e| e.count == 1 }
+          (a.keys | b.keys).map do |id|
+            x = (a[id] || {}).tap { |h| h.merge!({key_name => id}) if h[key_alias] == nil }
+            y = (b[id] || {}).tap { |h| h.merge!({key_name => id}) if h[key_alias] == nil }
+            calc_4_hashes(x, y, key_name, options).merge({key_name => id})
+          end.reject { |attrs| attrs.count == 1 }
 
         elsif object_hash?(a) && object_hash?(b)
-          a_id, b_id = a[:id] || a["id"], b[:id] || b["id"]
-
-          return [a, b] if (a_id != nil) && a_id != b_id
-
-          (a.keys | b.keys).each_with_object({}) do |key, hsh|
-            next if (x = a[key]) == (y = b[key])
-
-            opts = options[key.to_sym]
-
-            hsh[key] = if opts == :text && x.is_a?(String) && y.is_a?(String)
-              Base.calc(x, y, :text)
-            elsif opts == :object
-              Base.calc(x, y, :object)
-            elsif opts.is_a?(Hash)
-              Base.calc(x, y, :object, opts)
-            else
-              Base.calc(x, y, :simple)
-            end
-          end
-        else
-          [a, b]
+          key_name = a.has_key?(:id) ? :id : 'id'
+          calc_4_hashes a, b, key_name, options
         end
       end
 
       def apply a, delta, options = {}
-        if object_hash?(a)
-          return Base.apply(a, delta, :simple) if delta.is_a?(Array)
+        if object_hash_array?(a)
+          key_name = a.first.has_key?(:id) ? :id : 'id'
 
-          delta.each_with_object(a.dup) do |(k, v), result|
-            opts = options[k.to_sym]
+          ary_2_hsh(a).tap do |objects|
+            ary_2_hsh(delta).each do |id, delta|
+              attrs = (objects[id] || {}).tap do |attrs|
+                unless attrs.has_key?('id') || attrs.has_key?(:id)
+                  attrs.merge!({ key_name => id })
+                end
+              end
 
-            result[k] = if opts == :text && result[k].is_a?(String)
-              Base.apply(result[k], v, :text)
-            elsif opts == :object
-              Base.apply(result[k], v, :object)
-            elsif opts.is_a?(Hash)
-              Base.apply(result[k], v, :object, opts)
-            else
-              Base.apply(result[k], v, :simple)
+              objects[id] = apply(attrs, delta, options)
             end
-          end.reject{ |k, v| v == nil }
-        elsif object_hash_array?(a)
-          key = a.first.has_key?(:id) ? :id : "id"
-          ary_2_hsh(a).tap do |entries|
-            ary_2_hsh(delta).each do |k, v|
-              entry = (entries[k] || {}).tap { |p| p.merge!({ key => k }) if p['id'] == nil }
-              entries[k] = Base.apply(entry, v, :object, options)
-            end
-          end.values.reject { |e| e.count == 1 }
+          end.values.reject { |attrs| attrs.count == 1 }
+
+        elsif object_hash?(a)
+          apply_4_hash a, delta, options
         end
       end
 
     private
     module_function
 
-      def ary_2_hsh(ary)
-        ary.each_with_object({}) do |e, hsh|
-          key = e[e.has_key?(:id) ? :id : 'id']
-          hsh[key] = e.reject { |k, v| [:id, 'id'].include? k }
+      def calc_4_hashes(a, b, key_name, options={})
+        a_id, b_id = a[key_name.to_sym] || a[key_name.to_s], b[key_name.to_sym] || b[key_name.to_s]
+
+        return [a, b] if (a_id != nil) && a_id != b_id
+
+        (a.keys | b.keys).each_with_object({}) do |attr, result|
+          next if (x = a[attr]) == (y = b[attr])
+          opts = options[attr.to_sym] || :simple
+          opts = [:object, opts] if opts.is_a?(Hash)
+
+          result[attr] = Base.calc x, y, *opts
         end
       end
 
-      def object_hash_array? object
-        object.is_a?(Array) && object.all? { |o| object_hash?(o) }
+      def apply_4_hash a, delta, options={}
+        return Base.apply(a, delta, :simple) if delta.is_a?(Array)
+
+        delta.each_with_object(a.dup) do |(attr, value), result|
+          opts = options[attr.to_sym] || :simple
+          opts = [:object, opts] if opts.is_a?(Hash)
+
+          result[attr] = Base.apply(result[attr], value, *opts)
+        end.reject { |attr, value| value == nil }
+      end
+
+      def ary_2_hsh(ary)
+        ary.each_with_object({}) do |attrs, result|
+          key = attrs[attrs.has_key?(:id) ? :id : 'id']
+          result[key] = attrs.select { |attr, value| attr.to_s != 'id' }
+        end
+      end
+
+      def object_hash_array? ary
+        ary.is_a?(Array) && ary.all? { |object| object_hash?(object) }
       end
 
       def object_hash? object
         object.is_a?(Hash) && (object.has_key?(:id) || object.has_key?("id"))
       end
-
-=begin
-      def merge_object_hash_arrays a, b, field = :id
-        result = a.each_with_object({}) do |object, result|
-          object = object.with_indifferent_access
-          result[object[field]] = [object, nil]
-        end
-
-        result = b.each_with_object(result) do |object, result|
-          object = object.with_indifferent_access
-          result.key?(object[field]) ?
-            result[object[field]][1] = object :
-            result[object[field]] = [nil, object]
-        end
-
-        result.values
-      end
-=end
     end
   end
 end

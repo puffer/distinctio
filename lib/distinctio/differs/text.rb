@@ -13,17 +13,8 @@ module Distinctio
       end
 
       def apply a, delta, options = {}
-        #if !delta
-        #  return a, nil
-        #else
-          dmp = DiffMatchPatch.new
-          patch = dmp.patch_apply(dmp.patch_fromText(delta), a).first
-          #if patch.last.empty?
-          #  return patch.first, nil
-          #else
-          #  return *patch
-          #end
-        #end
+        dmp = DiffMatchPatch.new
+        dmp.patch_apply(dmp.patch_fromText(delta), a).first
       end
 
     end

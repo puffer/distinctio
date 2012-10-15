@@ -1,7 +1,7 @@
 require 'spec_helper.rb'
 
 describe "simple diff" do
-  subject { Distinctio::Base.new }
+  subject { Distinctio::Differs::Base }
 
   describe "text method" do
 
