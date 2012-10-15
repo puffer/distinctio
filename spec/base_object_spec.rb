@@ -41,8 +41,8 @@ describe "simple diff" do
         ] }
         let(:opts) { { :message => :text } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta }
-        specify { subject.apply(a, delta, :object, opts).should == b }
+        specify { subject.calc(a, b, :simple, opts).should == delta }
+        specify { subject.apply(a, delta, :simple, opts).should == b }
       end
 
       context "one entry as text, whole hash as a hash" do
@@ -68,7 +68,7 @@ describe "simple diff" do
           :extra => [nil, "Extra."],
           :name => ["Nancy", "Andy"]
         } }
-        let(:opts) { { :message => :text, :name => :object } }
+        let(:opts) { { :message => :text, :name => :simple } }
 
         specify { subject.calc(a, b, :object, opts).should == delta }
         specify { subject.apply(a, delta, :object, opts).should == b }

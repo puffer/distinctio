@@ -1,19 +1,19 @@
-class Distinctio
+module Distinctio
   module Differs
     module Simple
     module_function
 
       def calc a, b, options = {}
-        a == b ? nil : [a, b]
+        a == b ? {} : [a, b]
       end
 
       def apply a, delta, options = {}
-        if !delta
-          a, nil
-        elsif delta.first == a
-          delta.second, nil
+        if delta.empty? || delta == nil
+          return a#, nil
         else
-          nil, [a, *delta]
+          a == delta.last ? delta.first : delta.last
+        #else
+        #  return a#, [a, *delta]
         end
       end
 
