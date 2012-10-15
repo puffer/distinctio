@@ -5,41 +5,38 @@ module Distinctio
 
       def calc a, b, options = {}
         if object_hash_array?(a) && object_hash_array?(b)
-          key_name = a.first.has_key?(:id) ? :id : 'id'
-          key_alias = key_name.is_a?(Symbol) ? key_name.to_sym : key_name.to_s
-
+          key_name = :id
           a, b = ary_2_hsh(a), ary_2_hsh(b)
 
           (a.keys | b.keys).map do |id|
-            x = (a[id] || {}).tap { |h| h.merge!({key_name => id}) if h[key_alias] == nil }
-            y = (b[id] || {}).tap { |h| h.merge!({key_name => id}) if h[key_alias] == nil }
-            calc_4_hashes(x, y, key_name, options).merge({key_name => id})
+            x = (a[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
+            y = (b[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
+            { key_name => id }.merge calc_4_hashes(x, y, key_name, options)
           end.reject { |attrs| attrs.count == 1 }
 
         elsif object_hash?(a) && object_hash?(b)
-          key_name = a.has_key?(:id) ? :id : 'id'
-          calc_4_hashes a, b, key_name, options
+          calc_4_hashes a, b, :id, options
         end
       end
 
       def apply a, delta, options = {}
         if object_hash_array?(a)
-          key_name = a.first.has_key?(:id) ? :id : 'id'
+          key_name = :id
 
           ary_2_hsh(a).tap do |objects|
             ary_2_hsh(delta).each do |id, delta|
-              attrs = (objects[id] || {}).tap do |attrs|
-                unless attrs.has_key?('id') || attrs.has_key?(:id)
+              attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
+                unless attrs.has_key?(key_name)
                   attrs.merge!({ key_name => id })
                 end
               end
 
-              objects[id] = apply(attrs, delta, options)
+              objects[id] = apply_2_hash(attrs, delta, options)
             end
           end.values.reject { |attrs| attrs.count == 1 }
 
         elsif object_hash?(a)
-          apply_4_hash a, delta, options
+          apply_2_hash a, delta, options
         end
       end
 
@@ -47,9 +44,9 @@ module Distinctio
     module_function
 
       def calc_4_hashes(a, b, key_name, options={})
-        a_id, b_id = a[key_name.to_sym] || a[key_name.to_s], b[key_name.to_sym] || b[key_name.to_s]
+        a, b = a.with_indifferent_access, b.with_indifferent_access
 
-        return [a, b] if (a_id != nil) && a_id != b_id
+        return [a, b] if (a[:id] != nil) && a[:id] != b[:id]
 
         (a.keys | b.keys).each_with_object({}) do |attr, result|
           next if (x = a[attr]) == (y = b[attr])
@@ -57,10 +54,10 @@ module Distinctio
           opts = [:object, opts] if opts.is_a?(Hash)
 
           result[attr] = Base.calc x, y, *opts
-        end
+        end.with_indifferent_access
       end
 
-      def apply_4_hash a, delta, options={}
+      def apply_2_hash a, delta, options={}
         return Base.apply(a, delta, :simple) if delta.is_a?(Array)
 
         delta.each_with_object(a.dup) do |(attr, value), result|
@@ -68,13 +65,12 @@ module Distinctio
           opts = [:object, opts] if opts.is_a?(Hash)
 
           result[attr] = Base.apply(result[attr], value, *opts)
-        end.reject { |attr, value| value == nil }
+        end.reject { |attr, value| value == nil }.with_indifferent_access
       end
 
       def ary_2_hsh(ary)
         ary.each_with_object({}) do |attrs, result|
-          key = attrs[attrs.has_key?(:id) ? :id : 'id']
-          result[key] = attrs.select { |attr, value| attr.to_s != 'id' }
+          attrs.with_indifferent_access.tap { |a| result[a[:id]] = a.except(:id) }
         end
       end
 
@@ -83,7 +79,7 @@ module Distinctio
       end
 
       def object_hash? object
-        object.is_a?(Hash) && (object.has_key?(:id) || object.has_key?("id"))
+        object.is_a?(Hash) && object.with_indifferent_access.has_key?(:id)
       end
     end
   end

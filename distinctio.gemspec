@@ -17,6 +17,7 @@ Gem::Specification.new do |gem|
   gem.version       = Distinctio::VERSION
 
   gem.add_dependency 'diff_match_patch'
+  gem.add_dependency 'activesupport'
 
   gem.add_development_dependency "rake"
   gem.add_development_dependency "rspec"

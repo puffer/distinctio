@@ -111,19 +111,19 @@ describe "simple diff" do
         let(:a) { [ {"id" => 1, :name => 'world'}, {"id" => 2, :name => 'hello'} ] }
         let(:b) { [ {"id" => 2, :name => 'world'}, {"id" => 1, :name => 'hello'}, {"id" => 3, :name => 'goodbye'}] }
         let(:delta) { [
-          { "id" => 1, :name => ['world', 'hello'] },
-          { "id" => 2, :name => ['hello', 'world'] },
-          { "id" => 3, :name => [nil, 'goodbye'] }
+          { :id => 1, "name" => ['world', 'hello'] },
+          { :id => 2, "name" => ['hello', 'world'] },
+          { :id => 3, "name" => [nil, 'goodbye'] }
         ] }
 
         specify { subject.calc(a, b, :object).should == delta }
 
-        specify { subject.apply(a, delta, :object).should include({"id" => 2, :name => 'world'}) }
-        specify { subject.apply(a, delta, :object).should include({"id" => 1, :name => 'hello'}) }
-        specify { subject.apply(a, delta, :object).should include({"id" => 3, :name => 'goodbye'}) }
+        specify { subject.apply(a, delta, :object).should include({"id" => 2, "name" => 'world'}) }
+        specify { subject.apply(a, delta, :object).should include({"id" => 1, "name" => 'hello'}) }
+        specify { subject.apply(a, delta, :object).should include({"id" => 3, "name" => 'goodbye'}) }
 
-        specify { subject.apply(b, delta, :object).should include({"id" => 1, :name => 'world'}) }
-        specify { subject.apply(b, delta, :object).should include({"id" => 2, :name => 'hello'}) }
+        specify { subject.apply(b, delta, :object).should include({"id" => 1, "name" => 'world'}) }
+        specify { subject.apply(b, delta, :object).should include({"id" => 2, "name" => 'hello'}) }
         specify { subject.apply(b, delta, :object).should_not include({"id" => 3, :name => 'goodbye'}) }
       end
 
@@ -131,20 +131,20 @@ describe "simple diff" do
         let(:a) { [ {:id => 1, :name => 'world'}, {"id" => 2, :name => 'hello'} ] }
         let(:b) { [ {"id" => 2, :name => 'world'}, {:id => 1, :name => 'hello'}, {:id => 3, :name => 'goodbye'}] }
         let(:delta) { [
-          { :id => 1, :name => ['world', 'hello'] },
-          { :id => 2, :name => ['hello', 'world'] },
-          { :id => 3, :name => [nil, 'goodbye'] }
+          { :id => 1, 'name' => ['world', 'hello'] },
+          { :id => 2, 'name' => ['hello', 'world'] },
+          { :id => 3, 'name' => [nil, 'goodbye'] }
         ] }
 
         specify { subject.calc(a, b, :object).should == delta }
 
-        specify { subject.apply(a, delta, :object).should include({:id => 2, :name => 'world'}) }
-        specify { subject.apply(a, delta, :object).should include({:id => 1, :name => 'hello'}) }
-        specify { subject.apply(a, delta, :object).should include({:id => 3, :name => 'goodbye'}) }
+        specify { subject.apply(a, delta, :object).should include({"id" => 2, 'name' => 'world'}) }
+        specify { subject.apply(a, delta, :object).should include({"id" => 1, 'name' => 'hello'}) }
+        specify { subject.apply(a, delta, :object).should include({"id" => 3, 'name' => 'goodbye'}) }
 
-        specify { subject.apply(b, delta, :object).should include({"id" => 1, :name => 'world'}) }
-        specify { subject.apply(b, delta, :object).should include({"id" => 2, :name => 'hello'}) }
-        specify { subject.apply(b, delta, :object).should_not include({"id" => 3, :name => 'goodbye'}) }
+        specify { subject.apply(b, delta, :object).should include({"id" => 1, 'name' => 'world'}) }
+        specify { subject.apply(b, delta, :object).should include({"id" => 2, 'name' => 'hello'}) }
+        specify { subject.apply(b, delta, :object).should_not include({"id" => 3, 'name' => 'goodbye'}) }
       end
     end
 

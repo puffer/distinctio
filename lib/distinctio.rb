@@ -1,4 +1,5 @@
 require 'diff_match_patch'
+require 'active_support/all'
 require 'distinctio/version'
 require 'distinctio/distinctio'
 require 'distinctio/differs/base'
