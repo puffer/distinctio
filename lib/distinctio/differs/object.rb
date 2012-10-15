@@ -34,7 +34,6 @@ module Distinctio
               objects[id] = apply_2_hash(attrs, delta, options)
             end
           end.values.reject { |attrs| attrs.count == 1 }
-
         elsif object_hash?(a)
           apply_2_hash a, delta, options
         end
@@ -60,7 +59,7 @@ module Distinctio
       def apply_2_hash a, delta, options={}
         return Base.apply(a, delta, :simple) if delta.is_a?(Array)
 
-        delta.each_with_object(a.dup) do |(attr, value), result|
+        delta.each_with_object(a.with_indifferent_access) do |(attr, value), result|
           opts = options[attr.to_sym] || :simple
           opts = [:object, opts] if opts.is_a?(Hash)
 
@@ -74,11 +73,11 @@ module Distinctio
         end
       end
 
-      def object_hash_array? ary
+      def object_hash_array?(ary)
         ary.is_a?(Array) && ary.all? { |object| object_hash?(object) }
       end
 
-      def object_hash? object
+      def object_hash?(object)
         object.is_a?(Hash) && object.with_indifferent_access.has_key?(:id)
       end
     end
