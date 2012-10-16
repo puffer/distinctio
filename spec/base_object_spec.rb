@@ -70,8 +70,15 @@ describe "simple diff" do
         } }
         let(:opts) { { :message => :text, :name => :simple } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        context do
+          specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
+          specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        end
+
+        context do
+          let(:a) { { :id =>1, :name => 'Nancy', :message => 'none'} }
+          specify { subject.apply(a, delta, :object, opts)[:message].should be_a(Distinctio::Differs::Text::Error) }
+        end
       end
 
       context "with keys as symbols & strings" do

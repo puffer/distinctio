@@ -45,7 +45,7 @@ module Distinctio
       def calc_4_hashes(a, b, key_name, options={})
         a, b = a.with_indifferent_access, b.with_indifferent_access
 
-        return [a, b] if (a[:id] != nil) && a[:id] != b[:id]
+        return [a, b] if (a[:id].present?) && a[:id] != b[:id]
 
         (a.keys | b.keys).each_with_object({}) do |attr, result|
           next if (x = a[attr]) == (y = b[attr])
@@ -64,7 +64,7 @@ module Distinctio
           opts = [:object, opts] if opts.is_a?(Hash)
 
           result[attr] = Base.apply(result[attr], value, *opts)
-        end.reject { |attr, value| value == nil }.with_indifferent_access
+        end.reject { |attr, value| value.nil? }.with_indifferent_access
       end
 
       def ary_2_hsh(ary)
