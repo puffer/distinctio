@@ -11,16 +11,20 @@ module Distinctio
           (a.keys | b.keys).map do |id|
             x = (a[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
             y = (b[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
-            { key_name => id }.merge calc_4_hashes(x, y, key_name, options)
+
+            delta = calc_4_hashes(x, y, key_name, options)
+            { key_name => id }.merge(delta)
           end.reject { |attrs| attrs.count == 1 }
 
         elsif object_hash?(a) && object_hash?(b)
           calc_4_hashes a, b, :id, options
+        else
+          raise ArgumentError, "a and b must object attribute hashes or arrays of such hashes"
         end
       end
 
       def apply a, delta, options = {}
-        if object_hash_array?(a)
+        if object_hash_array?(a) && object_hash_array?(delta)
           key_name = :id
 
           ary_2_hsh(a).tap do |objects|
@@ -34,8 +38,14 @@ module Distinctio
               objects[id] = apply_2_hash(attrs, delta, options)
             end
           end.values.reject { |attrs| attrs.count == 1 }
+        elsif object_hash?(a) && (delta.is_a?(Hash) || delta.is_a?(Array))
+          apply_2_hash(a, delta, options)
         elsif object_hash?(a)
-          apply_2_hash a, delta, options
+          raise ArgumentError, "delta must be an object attribute hash or array of two elements"
+        elsif object_hash_array?(a)
+          raise ArgumentError, "delta must be an array of object attribute hashes"
+        else
+          raise ArgumentError, "a must be an object attribute hash, or an array of such hashes"
         end
       end
 

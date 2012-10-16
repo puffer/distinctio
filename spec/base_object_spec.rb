@@ -46,8 +46,8 @@ describe "simple diff" do
       end
 
       context "one entry as text, whole hash as a hash" do
-        let(:a) { { :id => 1, :name => 'Nancy', :message => 'hello, world!'} }
-        let(:b) { { :id => 2, :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
+        let(:a) { { :id => 1, :name => 'Nancy', :message => 'hello, world!'}.with_indifferent_access }
+        let(:b) { { :id => 2, :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'}.with_indifferent_access }
         let(:delta) { [
           {'id'=>1, 'name'=>"Nancy", 'message'=>"hello, world!"},
           {'id'=>2, 'name'=>"Nancy", 'message'=>"The world is mine!", 'extra'=>"Extra."}
@@ -70,15 +70,8 @@ describe "simple diff" do
         } }
         let(:opts) { { :message => :text, :name => :simple } }
 
-        context do
-          specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-          specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
-        end
-
-        context do
-          let(:a) { { :id =>1, :name => 'Nancy', :message => 'none'} }
-          specify { subject.apply(a, delta, :object, opts)[:message].should be_a(Distinctio::Differs::Text::Error) }
-        end
+        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
+        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
       end
 
       context "with keys as symbols & strings" do
@@ -136,7 +129,7 @@ describe "simple diff" do
               {:id=>1, :body=>"Lorem ipsum", :name=>"Heading"},
               {:id=>2, :body=>"Lorem ipsum dolor"}
             ]
-          }
+          }.with_indifferent_access
         }
         specify { subject.calc(a, b, :object).should == delta.with_indifferent_access }
         specify { subject.apply(a, delta, :object).should == b.with_indifferent_access }
@@ -153,14 +146,14 @@ describe "simple diff" do
             :name => 'Page',
             :page_part_attributes => { :id => 2, :body => "Lorem ipsum dolor" }
         } }
-        let(:delta) {
+        let(:delta) do
           {
             :page_part_attributes=>[
               {:id=>1, :body=>"Lorem ipsum", :name=>"Heading"},
               {:id=>2, :body=>"Lorem ipsum dolor"}
             ]
-          }
-        }
+          }.with_indifferent_access
+        end
         let(:opts) { { :page_part_attributes => :simple } }
 
         specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
@@ -331,10 +324,6 @@ describe "simple diff" do
 
               {:body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n", :id=>2}]}
         }
-        #{:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[]}]}
-        #let(:delta) {
-        #  {:page_parts=>[{:body=>"@@ -2,10 +2,4 @@\n orem\n- ipsum\n", :elems=>[[{:value=>"value", :id=>1}, {:value=>"simple value", :id=>1}]]}]}
-        #}
         let(:opts) { { :page_parts => { :elems => { :value => :text }, :body => :text } } }
         specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
         specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }

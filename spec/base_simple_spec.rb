@@ -14,11 +14,72 @@ describe "simple diff" do
       context do
         let(:a) { { :name => 'txt' } }
         let(:b) { { :name => 'txt' } }
-        let(:delta) { {} }
+        let(:delta) { nil }
 
         specify { subject.calc(a, b).should == delta }
         specify { subject.apply(a, delta).should == b }
         specify { subject.apply(b, delta).should == a }
+      end
+
+      context "raises an exception on mailformed a or b" do
+        specify do
+          expect { Distinctio::Differs::Base.calc(3, 2, :text) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.calc('txt', nil, :text) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.calc(nil, 'txt', :text) }.to raise_error(ArgumentError)
+        end
+      end
+
+      context "raises an exception on mailformed delta" do
+        specify do
+          expect { Distinctio::Differs::Base.apply(3, 2) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.apply(3, [3]) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.apply(3, [1, 2, 3]) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.apply(3, 2, :text) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.apply(nil, 'txt', :text) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.apply('txt', nil, :text) }.to raise_error(ArgumentError)
+        end
+
+        specify do
+          expect { Distinctio::Differs::Base.apply('txt', '@@ -1', :text) }.to raise_error(ArgumentError)
+        end
+      end
+
+      context "returns an error on inapplicable delta on simple" do
+        subject { Distinctio::Differs::Base.apply(3, [1, 2]) }
+
+        it { should be_a(Distinctio::Differs::Simple::Error) }
+        its(:actual_a) { should == 3 }
+        its(:expected_a) { should == 1 }
+        its(:expected_b) { should == 2 }
+      end
+
+      context "returns an error on inapplicable delta on text" do
+        let(:delta) { "@@ -1,13 +1,10 @@\n-Hello\n+By\n , world\n-!\n+.\n" }
+        subject { Distinctio::Differs::Base.apply('123', delta, :text) }
+
+        its(:a) { should == '123' }
+        its(:delta) { should == delta }
       end
 
       context do
@@ -34,7 +95,7 @@ describe "simple diff" do
       context do
         let(:a) { { } }
         let(:b) { { } }
-        let(:delta) { { } }
+        let(:delta) { nil }
         it_should_correctly "calc and apply difference"
       end
 
@@ -46,6 +107,44 @@ describe "simple diff" do
         specify { subject.calc(a, b, :object).should == delta }
         specify { subject.apply(a, delta, :object).should == b }
         specify { subject.apply(b, delta, :object).should == a }
+      end
+
+      context "bad delta" do
+        context "delta from another object" do
+          let(:a) { { 'id' => 1, 'name' => 'txt' } }
+          let(:b) { { 'id' => 1, 'name' => 'pdf' } }
+          let(:bad_delta) { { 'name' => ['doc', 'pdf'] } }
+
+          specify { subject.apply(a, bad_delta, :object)[:name].should be_a(Distinctio::Differs::Simple::Error) }
+        end
+
+        context "delta is not a hash" do
+          let(:a) { { 'id' => 1, 'name' => 'txt' } }
+
+          specify do
+            expect {
+              subject.apply({ 'id' => 1, 'name' => 'txt' }, 'str', :object)
+            }.to raise_error(ArgumentError)
+          end
+
+          specify do
+            expect {
+              subject.apply([{ 'id' => 1, 'name' => 'txt' }], 'str', :object)
+            }.to raise_error(ArgumentError)
+          end
+        end
+
+        context "bad argument" do
+          let(:delta) { { 'name' => ['txt', 'pdf'] } }
+
+          specify do
+            expect { subject.apply('str', delta, :object) }.to raise_error(ArgumentError)
+          end
+
+          specify do
+            expect { subject.apply('str', delta, :object) }.to raise_error(ArgumentError)
+          end
+        end
       end
 
       context do
@@ -173,14 +272,21 @@ describe "simple diff" do
       context "a and b are nil" do
         let(:a) { nil }
         let(:b) { nil }
-        let(:delta) { {} }
+        let(:delta) { nil }
+        it_should_correctly "calc and apply difference"
+      end
+
+      context "a and b are nil" do
+        let(:a) { nil }
+        let(:b) { 1 }
+        let(:delta) { [nil, 1] }
         it_should_correctly "calc and apply difference"
       end
 
       context "a and b are equal objects" do
         let(:a) { 1 }
         let(:b) { 1 }
-        let(:delta) { {} }
+        let(:delta) { nil }
         it_should_correctly "calc and apply difference"
       end
 
