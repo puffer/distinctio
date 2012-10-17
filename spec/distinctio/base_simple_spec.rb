@@ -26,13 +26,6 @@ describe "simple diff" do
           expect { Distinctio::Differs::Base.calc(3, 2, :text) }.to raise_error(ArgumentError)
         end
 
-        specify do
-          expect { Distinctio::Differs::Base.calc('txt', nil, :text) }.to raise_error(ArgumentError)
-        end
-
-        specify do
-          expect { Distinctio::Differs::Base.calc(nil, 'txt', :text) }.to raise_error(ArgumentError)
-        end
       end
 
       context "raises an exception on mailformed delta" do
@@ -52,17 +45,6 @@ describe "simple diff" do
           expect { Distinctio::Differs::Base.apply(3, 2, :text) }.to raise_error(ArgumentError)
         end
 
-        specify do
-          expect { Distinctio::Differs::Base.apply(nil, 'txt', :text) }.to raise_error(ArgumentError)
-        end
-
-        specify do
-          expect { Distinctio::Differs::Base.apply('txt', nil, :text) }.to raise_error(ArgumentError)
-        end
-
-        specify do
-          expect { Distinctio::Differs::Base.apply('txt', '@@ -1', :text) }.to raise_error(ArgumentError)
-        end
       end
 
       context "returns an error on inapplicable delta on simple" do
@@ -72,14 +54,6 @@ describe "simple diff" do
         its(:actual_a) { should == 3 }
         its(:expected_a) { should == 1 }
         its(:expected_b) { should == 2 }
-      end
-
-      context "returns an error on inapplicable delta on text" do
-        let(:delta) { "@@ -1,13 +1,10 @@\n-Hello\n+By\n , world\n-!\n+.\n" }
-        subject { Distinctio::Differs::Base.apply('123', delta, :text) }
-
-        its(:a) { should == '123' }
-        its(:delta) { should == delta }
       end
 
       context do
