@@ -6,3 +6,6 @@ require 'distinctio/differs/base'
 require 'distinctio/differs/object'
 require 'distinctio/differs/simple'
 require 'distinctio/differs/text'
+
+module Distinctio
+end
