@@ -9,13 +9,11 @@ describe Distinctio::ActiveRecord do
         subject { book.attributes_were }
 
         it { should be_a(Hash) }
-        it { should have(6).keys }
+        it { should have(4).keys }
         it { should have_key('id') }
         it { should have_key('name') }
         it { should have_key('year') }
-        it { should have_key('description') }
-        it { should have_key('created_at') }
-        it { should have_key('updated_at') }
+        it { should have_key('authors') }
       end
 
       context "attrs specified in distinctio method" do
@@ -23,7 +21,8 @@ describe Distinctio::ActiveRecord do
         subject { author.attributes_were }
 
         it { should be_a(Hash) }
-        it { should have(3).keys }
+        it { should have(4).keys }
+        it { should have_key('id') }
         it { should have_key('bio') }
         it { should have_key('name') }
         it { should have_key('books') }
@@ -61,13 +60,11 @@ describe Distinctio::ActiveRecord do
         subject { book.attributes_are }
 
         it { should be_a(Hash) }
-        it { should have(6).keys }
+        it { should have(4).keys }
         it { should have_key('id') }
         it { should have_key('name') }
         it { should have_key('year') }
-        it { should have_key('description') }
-        it { should have_key('created_at') }
-        it { should have_key('updated_at') }
+        it { should have_key('authors') }
       end
 
       context "attrs specified in distinctio method" do
@@ -75,7 +72,8 @@ describe Distinctio::ActiveRecord do
         subject { author.attributes_are }
 
         it { should be_a(Hash) }
-        it { should have(3).keys }
+        it { should have(4).keys }
+        it { should have_key('id') }
         it { should have_key('bio') }
         it { should have_key('name') }
         it { should have_key('books') }
@@ -83,7 +81,7 @@ describe Distinctio::ActiveRecord do
         describe "habtm model attributes" do
           subject { author.attributes_were['books'] }
           its(:count) { should == 1 }
-          specify { subject.first.should have(6).keys }
+          specify { subject.first.should have(3).keys }
         end
       end
 
@@ -101,7 +99,7 @@ describe Distinctio::ActiveRecord do
     describe "returns changed attributes" do
       let(:author) { Fabricate.build :author }
       before { author.name = "Another Name" }
-      specify { author.attributes_are['name'].should == "Another Name" }
+      specify { author.attributes_are()['name'].should == "Another Name" }
     end
   end
 
