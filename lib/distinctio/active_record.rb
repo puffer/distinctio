@@ -32,51 +32,44 @@ module Distinctio
       keys = default_keys if keys.nil?
       return hsh if keys.empty?
 
-      hash_keys = keys.select { |k| k.is_a? Hash }
-      keys = keys - hash_keys
+      keys, hash_keys = extract_hash_keys(keys)
       result = slice(hsh, keys)
 
       non_attr_keys = keys.map { |k| k.to_sym if k.respond_to? :to_sym } - result.keys.map(&:to_sym)
 
-      result = non_attr_keys.each_with_object(result) do |k, result|
-        if respond_to?(k)
-          obj = send(k)
-
-          result[k] = if obj.respond_to?(:snapshot)
-            obj.snapshot
-          elsif obj.is_a? Enumerable
-            obj.each_with_object([]) do |o, ary|
-              ary << o.snapshot if o.respond_to?(:snapshot)
-            end
+      make_snapshot = lambda do |result, obj, attr_name, attrs|
+        result[attr_name] = if obj.respond_to?(:snapshot)
+          obj.snapshot(attrs)
+        elsif obj.is_a? Enumerable
+          obj.each_with_object([]) do |o, ary|
+            ary << o.snapshot(attrs) if o.respond_to?(:snapshot)
           end
         end
       end
 
+      result = non_attr_keys.each_with_object(result) do |attr_name, result|
+        make_snapshot[result, send(attr_name), attr_name, []] if respond_to?(attr_name)
+      end
+
       hash_keys.each_with_object(result) do |pair, result|
-        (k, v) = pair.first
-
-        next unless respond_to?(k)
-        obj = send(k)
-
-        result[k] = if obj.respond_to?(:snapshot)
-          obj.snapshot(v)
-        elsif obj.is_a? Enumerable
-          obj.each_with_object([]) do |o, ary|
-            ary << o.snapshot(v) if o.respond_to?(:snapshot)
-          end
-        end
+        attr_name, attrs = pair.first
+        make_snapshot[result, send(attr_name), attr_name, attrs] if respond_to?(attr_name)
       end
     end
 
     private
 
+    def extract_hash_keys ary
+      hash_keys = ary.select { |k| k.is_a? Hash }
+      return ary - hash_keys, hash_keys
+    end
+
     def slice hsh, keys
       return hsh if keys.nil? || keys.empty?
 
-      hash_keys = keys.select { |k| k.is_a? Hash }
-      keys = keys - hash_keys
+      keys, hash_keys = extract_hash_keys(keys)
 
-      result = keys.each_with_object(HashWithIndifferentAccess.new) do |k, result|
+      result = keys.each_with_object({}.with_indifferent_access) do |k, result|
         result[k] = hsh[k] if hsh.has_key?(k)
       end
 
