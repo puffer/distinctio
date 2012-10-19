@@ -90,6 +90,15 @@ describe Distinctio::ActiveRecord do
       before { author.name = "Another Name" }
       specify { author.attributes_were.should == original }
     end
+
+    describe "" do
+      let(:club) { Fabricate.build :club }
+      specify do
+        expect { club.save }.to change(club, :attributes_are)
+          .from({"id" => nil, "name" => "Pickwick club", "url" => nil})
+          .to({"id" => 1, "name" => "Pickwick club", "url" => nil})
+      end
+    end
   end
 
   describe "#attributes_are" do

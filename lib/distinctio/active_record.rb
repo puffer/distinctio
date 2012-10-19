@@ -6,7 +6,11 @@ module Distinctio
       class_attribute :_distinctio
 
       after_initialize do |record|
-        @original = snapshot _distinctio
+        @original = snapshot(_distinctio)
+      end
+
+      after_save do |record|
+        @original = snapshot(_distinctio)
       end
     end
 
