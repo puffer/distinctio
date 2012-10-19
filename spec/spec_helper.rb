@@ -10,6 +10,7 @@ ActiveRecord::Base.establish_connection(ENV["DB"] || "sqlite3")
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 ActiveRecord::Migrator.migrate(File.dirname(__FILE__) + "/support/migrate")
+ActiveSupport::Deprecation.silenced = true
 
 RSpec.configure do |config|
   config.mock_with :rspec
