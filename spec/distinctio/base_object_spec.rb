@@ -33,6 +33,31 @@ describe "simple diff" do
       end
 
       context "entries have no id, whole hash as an object" do
+        let(:a) do
+          [
+            { :id => 1, :name => 'Jack' }.with_indifferent_access,
+            { :id => 2, :name => 'Jill' }.with_indifferent_access
+          ]
+        end
+        let(:b) do
+          [
+            { :id => 2, :name => 'Jill' }.with_indifferent_access,
+            { :id => 3, :name => 'Fred' }.with_indifferent_access
+          ]
+        end
+        let(:delta) do
+          [
+            { :id=>1, "name"=>["Jack", nil] },
+            { :id=>3, "name"=>[nil, "Fred"] }
+          ]
+        end
+
+        specify { subject.calc(a, b, :object).should == delta }
+        specify { subject.apply(a, delta, :object).should == b }
+        #specify { subject.apply(b, delta, :object).should == a }
+      end
+
+      context "entries have no id, whole hash as an object" do
         let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
         let(:b) { { :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
         let(:delta) { [

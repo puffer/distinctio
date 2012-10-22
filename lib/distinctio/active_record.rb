@@ -28,23 +28,21 @@ module Distinctio
     end
 
     def apply(delta)
-      hsh = attributes.with_indifferent_access
-      d = delta.with_indifferent_access
-      attr_delta = slice(d, hsh.keys)
-      other_attrs = slice(d, d.keys - attr_delta.keys)
+      new_state = Distinctio::Differs::Base.apply(attributes_are, delta, :object, { :authors => :object })
+
+      attr_delta = slice(new_state, attributes.keys)
+      other_attrs = slice(new_state, new_state.keys - attr_delta.keys)
 
       other_attrs.each do |key, value|
-        attr_value = self.send(key)
+        attr = self.send(key)
 
-        if attr_value.is_a?(Enumerable)
-          a = attr_value.map(&:attributes)
-          Distinctio::Differs::Base.apply(a, value, :object).each do |aaa|
-            attr_value.build(aaa) { |obj| obj.id = aaa[:id] }
-          end
+        if attr.is_a?(Enumerable)
+          attr.clear
+          value.each { |v| attr.build v }
         end
       end
 
-      self.attributes = Distinctio::Differs::Base.apply(hsh, attr_delta, :object)
+      self.attributes = attr_delta
     end
 
     module ClassMethods

@@ -19,7 +19,7 @@ module Distinctio
         elsif object_hash?(a) && object_hash?(b)
           calc_4_hashes a, b, :id, options
         else
-          raise ArgumentError, "a and b must object attribute hashes or arrays of such hashes"
+          raise ArgumentError, "a and b must be object attribute hashes or arrays of such hashes"
         end
       end
 
@@ -27,7 +27,8 @@ module Distinctio
         if object_hash_array?(a) && object_hash_array?(delta)
           key_name = :id
 
-          ary_2_hsh(a).tap do |objects|
+          ary_2_hsh(a).each { |k, v| v[key_name] = k }.tap do |objects|
+
             ary_2_hsh(delta).each do |id, delta|
               attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
                 unless attrs.has_key?(key_name)

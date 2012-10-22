@@ -39,12 +39,34 @@ describe Distinctio::ActiveRecord do
         }
       end
 
-      let(:delta) { Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object, {:authors => :object }) }
+      let(:delta) { Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object, { :authors => :object }) }
 
       specify { expect { book.apply(delta) }.not_to change(book, :id) }
       specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
       specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
       specify { expect { book.apply(delta) }.to change(book.authors, :size).from(0).to(1) }
+    end
+
+
+    describe "attrs specified in distinctio method" do
+      let(:book) { Fabricate(:book_with_author) }
+      let(:old_attrs) { book.attributes_are }
+      let(:new_attrs) do
+        {
+          'id' => book.id, 'name' => 'A new name', 'year' => 1900,
+          'authors' => [
+            { 'id' => 155, 'name' => 'Somebody', 'bio' => 'Somebody bio' } ,
+            { 'id' => 551, 'name' => 'Anybody', 'bio' => 'Anybody bio' }
+          ]
+        }
+      end
+
+      let(:delta) { Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object, { :authors => :object }) }
+
+      specify { expect { book.apply(delta) }.not_to change(book, :id) }
+      specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
+      specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
+      specify { expect { book.apply(delta) }.to change(book.authors, :size).to(2) }
     end
   end
 
