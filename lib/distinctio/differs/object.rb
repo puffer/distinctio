@@ -18,6 +18,10 @@ module Distinctio
 
         elsif object_hash?(a) && object_hash?(b)
           calc_4_hashes a, b, :id, options
+        elsif object_hash?(a) && b.nil?
+          [a, nil]
+        elsif a.nil? && object_hash?(b)
+          [nil, b]
         else
           raise ArgumentError, "a and b must be object attribute hashes or arrays of such hashes"
         end
@@ -75,7 +79,7 @@ module Distinctio
           opts = [:object, opts] if opts.is_a?(Hash)
 
           result[attr] = Base.apply(result[attr], value, *opts)
-        end.reject { |attr, value| value.nil? }.with_indifferent_access
+        end.with_indifferent_access #.reject { |attr, value| value.nil? }.with_indifferent_access
       end
 
       def ary_2_hsh(ary)

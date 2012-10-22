@@ -28,21 +28,37 @@ module Distinctio
     end
 
     def apply(delta)
-      new_state = Distinctio::Differs::Base.apply(attributes_are, delta, :object, { :authors => :object })
+      keys, hash_keys = extract_hash_keys(default_keys)
+      opts = hash_keys.map { |e| e.keys.first.to_sym }.each_with_object({}) { |e, h| h[e] = :object }
+      _apply Distinctio::Differs::Base.apply(attributes_are, delta, :object, opts)
+    end
 
-      attr_delta = slice(new_state, attributes.keys)
-      other_attrs = slice(new_state, new_state.keys - attr_delta.keys)
+    def _apply(hsh)
+      new_attrs = slice(hsh, attributes.keys)
+      self.attributes = new_attrs
 
-      other_attrs.each do |key, value|
-        attr = self.send(key)
+      slice(hsh, hsh.keys - attributes.keys).each do |attr_name, attr_value|
+        association = self.send(attr_name)
 
-        if attr.is_a?(Enumerable)
-          attr.clear
-          value.each { |v| attr.build v }
+        if association.is_a?(Enumerable) && attr_value.is_a?(Array)
+          association.clear
+          attr_value.each { |attrs| association.build { |obj| write_attrs(obj, attrs) } }
+          puts attr_value
+        elsif attr_value.is_a?(Hash)
+          write_attrs(attr_value, attr_value)
+        elsif attr_value.nil?
+          send "#{attr_name}=", nil
         end
       end
+    end
 
-      self.attributes = attr_delta
+    def write_attrs o, attrs
+      o.id = attrs[:id]
+      if o.respond_to?(:_apply)
+        o._apply attrs
+      else
+        o.attributes = attrs
+      end
     end
 
     module ClassMethods

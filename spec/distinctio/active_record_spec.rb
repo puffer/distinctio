@@ -47,7 +47,6 @@ describe Distinctio::ActiveRecord do
       specify { expect { book.apply(delta) }.to change(book.authors, :size).from(0).to(1) }
     end
 
-
     describe "attrs specified in distinctio method" do
       let(:book) { Fabricate(:book_with_author) }
       let(:old_attrs) { book.attributes_are }
@@ -66,7 +65,38 @@ describe Distinctio::ActiveRecord do
       specify { expect { book.apply(delta) }.not_to change(book, :id) }
       specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
       specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
-      specify { expect { book.apply(delta) }.to change(book.authors, :size).to(2) }
+      specify { expect { book.apply(delta) }.to change(book.authors, :size).from(1).to(2) }
+    end
+
+    describe "attrs specified in distinctio method" do
+      let(:author) { Fabricate(:author) }
+      let(:old_attrs) { author.attributes_are }
+      let(:new_attrs) do
+        {
+          'id' => author.id, 'name' => 'A new name',
+          'books' => [],
+          'club' => nil,
+          'awards' => [{ 'id' => 135, 'name' => 'Medal of Honor' }]
+        }
+      end
+
+      let(:delta) do
+        Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object,
+          { :books => :object, :awards => :object, :club => :object })
+      end
+
+      specify { expect { author.apply(delta) }.not_to change(author, :id) }
+      specify { expect { author.apply(delta) }.to change(author, :name).to('A new name') }
+      specify { expect { author.apply(delta) }.to change(author.books, :size).from(1).to(0) }
+      specify { expect { author.apply(delta) }.to change(author.awards, :size).from(2).to(1) }
+      specify {
+        puts delta
+        author.apply(delta)
+        author.club.should be_nil
+        puts author.awards.inspect
+        puts "------"
+        puts author.changes
+      }
     end
   end
 
