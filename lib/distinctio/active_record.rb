@@ -9,8 +9,13 @@ module Distinctio
         @original = snapshot(_distinctio)
       end
 
-      after_save do |record|
+      after_create do |record|
         @original = snapshot(_distinctio)
+      end
+
+      after_update do |record|
+        @original = snapshot(_distinctio)
+        History.create(model_type: record.class.name, model_id: record.id, delta: @original)
       end
     end
 
@@ -20,6 +25,26 @@ module Distinctio
 
     def attributes_are(*attrs)
       snapshot(attrs.nil? || attrs.empty? ? default_keys : attrs)
+    end
+
+    def apply(delta)
+      hsh = attributes.with_indifferent_access
+      d = delta.with_indifferent_access
+      attr_delta = slice(d, hsh.keys)
+      other_attrs = slice(d, d.keys - attr_delta.keys)
+
+      other_attrs.each do |key, value|
+        attr_value = self.send(key)
+
+        if attr_value.is_a?(Enumerable)
+          a = attr_value.map(&:attributes)
+          Distinctio::Differs::Base.apply(a, value, :object).each do |aaa|
+            attr_value.build(aaa) { |obj| obj.id = aaa[:id] }
+          end
+        end
+      end
+
+      self.attributes = Distinctio::Differs::Base.apply(hsh, attr_delta, :object)
     end
 
     module ClassMethods
