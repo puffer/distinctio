@@ -19,6 +19,14 @@ module Distinctio
       end
     end
 
+    module ClassMethods
+
+      def distinctio(*attrs)
+        self._distinctio = attrs
+      end
+
+    end
+
     def attributes_were(*attrs)
       slice(@original, attrs.nil? || attrs.empty? ? default_keys : attrs)
     end
@@ -31,41 +39,6 @@ module Distinctio
       keys, hash_keys = extract_hash_keys(default_keys)
       opts = hash_keys.map { |e| e.keys.first.to_sym }.each_with_object({}) { |e, h| h[e] = :object }
       _apply Distinctio::Differs::Base.apply(attributes_are, delta, :object, opts)
-    end
-
-    def _apply(hsh)
-      new_attrs = slice(hsh, attributes.keys)
-      self.attributes = new_attrs
-
-      slice(hsh, hsh.keys - attributes.keys).each do |attr_name, attr_value|
-        association = self.send(attr_name)
-
-        if association.is_a?(Enumerable) && attr_value.is_a?(Array)
-          association.clear
-          attr_value.each { |attrs| association.build { |obj| write_attrs(obj, attrs) }; }
-        elsif attr_value.is_a?(Hash)
-          write_attrs(attr_value, attr_value)
-        elsif attr_value.nil?
-          send "#{attr_name}=", nil
-        end
-      end
-    end
-
-    def write_attrs o, attrs
-      o.id = attrs[:id]
-      if o.respond_to?(:_apply)
-        o._apply attrs
-      else
-        o.attributes = attrs
-      end
-    end
-
-    module ClassMethods
-
-      def distinctio(*attrs)
-        self._distinctio = attrs
-      end
-
     end
 
     def snapshot keys=[]
@@ -100,6 +73,33 @@ module Distinctio
     end
 
     private
+
+    def write_attrs o, attrs
+      o.id = attrs[:id]
+      if o.respond_to?(:_apply)
+        o._apply attrs
+      else
+        o.attributes = attrs
+      end
+    end
+
+    def _apply(hsh)
+      new_attrs = slice(hsh, attributes.keys)
+      self.attributes = new_attrs
+
+      slice(hsh, hsh.keys - attributes.keys).each do |attr_name, attr_value|
+        association = self.send(attr_name)
+
+        if association.is_a?(Enumerable) && attr_value.is_a?(Array)
+          association.clear
+          attr_value.each { |attrs| association.build { |obj| write_attrs(obj, attrs) }; }
+        elsif attr_value.is_a?(Hash)
+          write_attrs(attr_value, attr_value)
+        elsif attr_value.nil?
+          send "#{attr_name}=", nil
+        end
+      end
+    end
 
     def extract_hash_keys ary
       hash_keys = ary.select { |k| k.is_a? Hash }
