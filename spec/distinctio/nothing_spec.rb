@@ -16,7 +16,7 @@ describe Distinctio::Nothing do
 
   describe "can be serialized in a hash key" do
     before  { History.create :model_type => 'None', :model_id => 1, :delta => { :k => Distinctio::Nothing.new } }
-    specify { History.first.delta[:k].should be_a(Distinctio::Nothing) }
+    specify { History.last.delta[:k].should be_a(Distinctio::Nothing) }
   end
 
 end

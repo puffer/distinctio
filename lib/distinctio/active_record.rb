@@ -42,12 +42,7 @@ module Distinctio
 
         if association.is_a?(Enumerable) && attr_value.is_a?(Array)
           association.clear
-          puts association.inspect
-          puts attr_value.inspect
           attr_value.each { |attrs| association.build { |obj| write_attrs(obj, attrs) }; }
-
-          puts association.inspect
-          #puts attr_name
         elsif attr_value.is_a?(Hash)
           write_attrs(attr_value, attr_value)
         elsif attr_value.nil?

@@ -189,7 +189,7 @@ describe "simple diff" do
         let(:a) { {
             :id => 1,
             :name => 'Page',
-            :page_part_attributes => { :id => 1, :body => "Lorem ipsum", :name => "Heading" }
+            :page_part_attributes => { :id => 1, :body => "Lorem ipsum" }
         } }
         let(:b) { {
             :id => 1,
@@ -201,7 +201,6 @@ describe "simple diff" do
           {
             :page_part_attributes=>{
               :body=>"@@ -4,8 +4,14 @@\n em ipsum\n+ dolor\n",
-              :name=>["Heading", nil],
               :entry=>[nil, {:id=>1, :name=>"Name"}]
             }
           }

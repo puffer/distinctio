@@ -141,34 +141,6 @@ describe "simple diff" do
         specify { subject.apply(b, delta, :object).should == a }
       end
 
-      describe "" do
-        describe do
-          let(:a) { { :id => 1, :data => 'data' } }
-          let(:b) { { :id => 1, :code => 'code' } }
-          let(:delta) { {
-            'data' =>  ['data', Distinctio::Nothing.new],
-            'code' =>  [Distinctio::Nothing.new, 'code']
-          } }
-
-          specify { subject.calc(a, b, :object).should == delta }
-          specify { subject.apply(a, delta, :object).should == b.with_indifferent_access }
-          specify { subject.apply(b, delta, :object).should == a.with_indifferent_access }
-        end
-
-        describe do
-          let(:a) { { :id => 1, :code => nil, :data => 'data' } }
-          let(:b) { { :id => 1, :code => 'code', :data => nil } }
-          let(:delta) { {
-            'data' =>  ['data', nil],
-            'code' =>  [nil, 'code']
-          } }
-
-          specify { subject.calc(a, b, :object).should == delta }
-          specify { subject.apply(a, delta, :object).should == b.with_indifferent_access }
-          specify { subject.apply(b, delta, :object).should == a.with_indifferent_access }
-        end
-      end
-
       context do
         let(:a) { { :id => 1, :name => 'txt', :body => 'hello!', :count => 5, :stats => [3, 7], :data => 'data' } }
         let(:b) { { :id => 1, :name => 'txt', :body => 'goodbye!', :count => 7, :stats => [6, 7], :code => 'code' } }
@@ -181,8 +153,8 @@ describe "simple diff" do
         } }
 
         specify { subject.calc(a, b, :object).should == delta }
-        specify { subject.apply(a, delta, :object).should == b.with_indifferent_access }
-        specify { subject.apply(b, delta, :object).should == a.with_indifferent_access }
+        specify { subject.apply(a, delta, :object).except(:data).should == b.with_indifferent_access }
+        specify { subject.apply(b, delta, :object).except(:code).should == a.with_indifferent_access }
       end
     end
 
