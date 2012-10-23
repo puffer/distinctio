@@ -1,6 +1,10 @@
 module Distinctio
   module Differs
     module Base
+
+      class Error
+      end
+
     module_function
 
       def calc(a, b, *mode_and_options)

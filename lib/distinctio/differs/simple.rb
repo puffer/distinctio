@@ -2,11 +2,15 @@ module Distinctio
   module Differs
     module Simple
 
-      class Error
+      class Error < Distinctio::Differs::Base::Error
         attr_reader :actual_a, :expected_a, :expected_b
 
         def initialize actual_a, expected_a, expected_b
           @actual_a, @expected_a, @expected_b = actual_a, expected_a, expected_b
+        end
+
+        def value
+          expected_b
         end
       end
 

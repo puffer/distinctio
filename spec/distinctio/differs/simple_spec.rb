@@ -74,7 +74,7 @@ describe Distinctio::Differs::Simple do
     end
 
     context "returns an error on inapplicable delta" do
-      subject { Distinctio::Differs::Base.apply(3, [1, 2]) }
+      subject { Distinctio::Differs::Simple.apply(3, [1, 2]) }
 
       it { should be_a(Distinctio::Differs::Simple::Error) }
       its(:actual_a) { should == 3 }

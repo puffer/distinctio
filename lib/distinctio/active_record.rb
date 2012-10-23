@@ -3,7 +3,10 @@ module Distinctio
     extend ActiveSupport::Concern
 
     included do
+      validates_with Distinctio::Validator
+
       class_attribute :_distinctio
+      attr_accessor :distinctio_errors
 
       after_initialize do |record|
         @original = snapshot(_distinctio)
@@ -17,6 +20,15 @@ module Distinctio
         @original = snapshot(_distinctio)
         History.create(model_type: record.class.name, model_id: record.id, delta: @original)
       end
+
+      def distinctio_errors=(value)
+        @distinctio_errors = value if value.is_a?(Enumerable)
+      end
+
+      def distinctio_errors
+        @distinctio_errors || []
+      end
+
     end
 
     module ClassMethods
@@ -26,7 +38,6 @@ module Distinctio
       end
 
     end
-
     def attributes_were(*attrs)
       slice(@original, attrs.nil? || attrs.empty? ? default_keys : attrs)
     end
@@ -38,7 +49,7 @@ module Distinctio
     def apply(delta)
       keys, hash_keys = extract_hash_keys(default_keys)
       opts = hash_keys.map { |e| e.keys.first.to_sym }.each_with_object({}) { |e, h| h[e] = :object }
-      _apply Distinctio::Differs::Base.apply(attributes_are, delta, :object, opts)
+      self.distinctio_errors = _apply!(Distinctio::Differs::Base.apply(attributes_are, delta, :object, opts))
     end
 
     def snapshot keys=[]
@@ -74,31 +85,45 @@ module Distinctio
 
     private
 
-    def write_attrs o, attrs
-      o.id = attrs[:id]
-      if o.respond_to?(:_apply)
-        o._apply attrs
-      else
-        o.attributes = attrs
+    def _apply!(hsh)
+      write_distinctio_attrs = lambda do |o, attrs|
+        attrs.each_with_object({}) do |(attr_name, attr_value), errors|
+          new_value = if attr_value.is_a?(Distinctio::Differs::Base::Error)
+            errors[attr_name] = attr_value
+            attr_value.value
+          else
+            attr_value
+          end
+          o.send("#{attr_name}=", new_value)
+        end
       end
-    end
 
-    def _apply(hsh)
-      new_attrs = slice(hsh, attributes.keys)
-      self.attributes = new_attrs
+      write_attrs = lambda do |o, attrs|
+        o.id = attrs[:id]
+        if o.respond_to?(:_apply!)
+          o._apply!(attrs)
+        else
+          write_distinctio_attrs[o, attrs]
+        end
+      end
 
-      slice(hsh, hsh.keys - attributes.keys).each do |attr_name, attr_value|
+      errors = write_distinctio_attrs[self, slice(hsh, attributes.keys)]
+
+      errors2 = slice(hsh, hsh.keys - attributes.keys).each_with_object({}) do |(attr_name, attr_value), errors|
         association = self.send(attr_name)
 
         if association.is_a?(Enumerable) && attr_value.is_a?(Array)
           association.clear
-          attr_value.each { |attrs| association.build { |obj| write_attrs(obj, attrs) }; }
+          attr_value.map { |attrs| write_attrs[association.build, attrs] }.reject(&:empty?).tap do |ers|
+            errors[attr_name] = ers unless ers.empty?
+          end
         elsif attr_value.is_a?(Hash)
-          write_attrs(attr_value, attr_value)
+          errors[attr_name] = write_attrs[attr_value, attr_value]
         elsif attr_value.nil?
           send "#{attr_name}=", nil
         end
       end
+      errors.merge errors2
     end
 
     def extract_hash_keys ary

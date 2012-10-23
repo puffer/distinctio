@@ -27,6 +27,7 @@ describe Distinctio::ActiveRecord do
       specify { expect { club.apply(delta) }.not_to change(club, :id) }
       specify { expect { club.apply(delta) }.to change(club, :name).to('A new name') }
       specify { expect { club.apply(delta) }.to change(club, :url).from(nil).to('http://club.com') }
+      specify { expect { club.apply(delta) }.not_to change(club, :valid?).to(false) }
     end
 
     describe "attrs specified in distinctio method" do
@@ -45,6 +46,7 @@ describe Distinctio::ActiveRecord do
       specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
       specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
       specify { expect { book.apply(delta) }.to change(book.authors, :size).from(0).to(1) }
+      specify { expect { book.apply(delta) }.not_to change(book, :valid?).to(false) }
     end
 
     describe "attrs specified in distinctio method" do
@@ -66,6 +68,7 @@ describe Distinctio::ActiveRecord do
       specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
       specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
       specify { expect { book.apply(delta) }.to change(book.authors, :size).from(1).to(2) }
+      specify { expect { book.apply(delta) }.not_to change(book, :valid?).to(false) }
     end
 
     describe "attrs specified in distinctio method" do
@@ -90,6 +93,16 @@ describe Distinctio::ActiveRecord do
       specify { expect { author.apply(delta) }.to change(author.books, :size).from(1).to(0) }
       specify { expect { author.apply(delta) }.to change(author.awards, :size).from(2).to(1) }
       specify { expect { author.apply(delta) }.to change(author, :club).to(nil) }
+      specify { expect { author.apply(delta) }.not_to change(author, :valid?).to(false) }
+    end
+
+    describe "bad delta specified" do
+      let(:club) { Fabricate :club }
+      let(:wrong_delta) { {"name"=>['Fight club', 'A new name']} }
+      before { club.apply(wrong_delta) }
+      specify { club.name.should == 'A new name' }
+      specify { club.distinctio_errors.size.should == 1 }
+      specify { club.should be_invalid }
     end
   end
 
@@ -267,5 +280,4 @@ describe Distinctio::ActiveRecord do
       specify { author.attributes_are['name'].should == "Another Name" }
     end
   end
-
 end

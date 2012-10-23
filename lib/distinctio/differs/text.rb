@@ -2,11 +2,15 @@ module Distinctio
   module Differs
     module Text
 
-      class Error
-        attr_reader :a, :delta
+      class Error < Distinctio::Differs::Base::Error
+        attr_reader :a, :delta, :result
 
-        def initialize a, delta
-          @a, @delta = a, delta
+        def initialize a, delta, result
+          @a, @delta, @result = a, delta, result
+        end
+
+        def value
+          result
         end
       end
 
@@ -30,7 +34,7 @@ module Distinctio
 
         result, statuses = patcher.patch_apply(patcher.patch_fromText(delta), a)
         has_patch_errors = statuses.any? { |status| !status }
-        has_patch_errors ? Error.new(a, delta) : result
+        has_patch_errors ? Error.new(a, delta, result) : result
       end
 
     private
