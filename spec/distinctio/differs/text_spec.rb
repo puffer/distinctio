@@ -29,7 +29,7 @@ describe Distinctio::Differs::Text do
 
     context "raises an exception on mailformed a or b" do
       specify do
-        expect { Distinctio::Differs::Base.calc(3, 2, :text) }.to raise_error(ArgumentError)
+        expect { subject.calc(3, 2, :text) }.to raise_error(ArgumentError)
       end
     end
   end

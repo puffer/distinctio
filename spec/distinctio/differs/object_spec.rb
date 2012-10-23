@@ -1,16 +1,115 @@
 require 'spec_helper.rb'
 
-describe "simple diff" do
-  subject { Distinctio::Differs::Base }
+describe Distinctio::Differs::Object do
+  context "a and b are object hashes" do
+
+    context do
+      let(:a) { { 'id' => 1, 'key' => 0 } }
+      let(:b) { { 'id' => 1, 'key' => 1 } }
+      let(:delta) { { 'key' => [0, 1] } }
+
+      specify { subject.calc(a, b).should == delta }
+      specify { subject.apply(a, delta).should == b }
+      specify { subject.apply(b, delta).should == a }
+    end
+
+    context do
+      let(:a) { { 'id' => 1, 'key' => [1, 2] } }
+      let(:b) { { 'id' => 1, 'key' => [2, 3] } }
+      let(:delta) { { 'key' => [[1, 2], [2, 3]] } }
+
+      specify { subject.calc(a, b).should == delta }
+      specify { subject.apply(a, delta).should == b }
+      specify { subject.apply(b, delta).should == a }
+    end
+
+    context do
+      let(:a) { { :id => 1, :name => 'txt', :body => 'hello!', :count => 5, :stats => [3, 7], :data => 'data' } }
+      let(:b) { { :id => 1, :name => 'txt', :body => 'goodbye!', :count => 7, :stats => [6, 7], :code => 'code' } }
+      let(:delta) { {
+        'body' =>  ['hello!', 'goodbye!'],
+        'count' => [5, 7],
+        'stats' => [[3, 7], [6, 7]],
+        'data' =>  ['data', nil],
+        'code' =>  [nil, 'code']
+      } }
+
+      specify { subject.calc(a, b).should == delta }
+      specify { subject.apply(a, delta).except(:data).should == b.with_indifferent_access }
+      specify { subject.apply(b, delta).except(:code).should == a.with_indifferent_access }
+    end
+  end
+
+  context "a and b are arrays of hashes with id" do
+    context "as a symbol" do
+      let(:a) { [ {:id => 1, :name => 'world'}, {:id => 2, :name => 'hello'} ] }
+      let(:b) { [ {:id => 2, :name => 'world'}, {:id => 1, :name => 'hello'}, {:id => 3, :name => 'goodbye'}] }
+      let(:delta) { [
+        { :id => 1, 'name' => ['world', 'hello'] },
+        { :id => 2, 'name' => ['hello', 'world'] },
+        { :id => 3, 'name' => [nil, 'goodbye'] }
+      ] }
+
+      specify { subject.calc(a, b).should == delta }
+
+      specify { subject.apply(a, delta).should include({'id' => 2, 'name' => 'world'}) }
+      specify { subject.apply(a, delta).should include({'id' => 1, 'name' => 'hello'}) }
+      specify { subject.apply(a, delta).should include({'id' => 3, 'name' => 'goodbye'}) }
+
+      specify { subject.apply(b, delta).should include({'id' => 1, 'name' => 'world'}) }
+      specify { subject.apply(b, delta).should include({'id' => 2, 'name' => 'hello'}) }
+      specify { subject.apply(b, delta).should_not include({'id' => 3, 'name' => 'goodbye'}) }
+    end
+
+    context "as a string" do
+      let(:a) { [ {"id" => 1, :name => 'world'}, {"id" => 2, :name => 'hello'} ] }
+      let(:b) { [ {"id" => 2, :name => 'world'}, {"id" => 1, :name => 'hello'}, {"id" => 3, :name => 'goodbye'}] }
+      let(:delta) { [
+        { :id => 1, "name" => ['world', 'hello'] },
+        { :id => 2, "name" => ['hello', 'world'] },
+        { :id => 3, "name" => [nil, 'goodbye'] }
+      ] }
+
+      specify { subject.calc(a, b).should == delta }
+
+      specify { subject.apply(a, delta).should include({"id" => 2, "name" => 'world'}) }
+      specify { subject.apply(a, delta).should include({"id" => 1, "name" => 'hello'}) }
+      specify { subject.apply(a, delta).should include({"id" => 3, "name" => 'goodbye'}) }
+
+      specify { subject.apply(b, delta).should include({"id" => 1, "name" => 'world'}) }
+      specify { subject.apply(b, delta).should include({"id" => 2, "name" => 'hello'}) }
+      specify { subject.apply(b, delta).should_not include({"id" => 3, :name => 'goodbye'}) }
+    end
+
+    context "as a string and a symbol" do
+      let(:a) { [ {:id => 1, :name => 'world'}, {"id" => 2, :name => 'hello'} ] }
+      let(:b) { [ {"id" => 2, :name => 'world'}, {:id => 1, :name => 'hello'}, {:id => 3, :name => 'goodbye'}] }
+      let(:delta) { [
+        { :id => 1, 'name' => ['world', 'hello'] },
+        { :id => 2, 'name' => ['hello', 'world'] },
+        { :id => 3, 'name' => [nil, 'goodbye'] }
+      ] }
+
+      specify { subject.calc(a, b).should == delta }
+
+      specify { subject.apply(a, delta).should include({"id" => 2, 'name' => 'world'}) }
+      specify { subject.apply(a, delta).should include({"id" => 1, 'name' => 'hello'}) }
+      specify { subject.apply(a, delta).should include({"id" => 3, 'name' => 'goodbye'}) }
+
+      specify { subject.apply(b, delta).should include({"id" => 1, 'name' => 'world'}) }
+      specify { subject.apply(b, delta).should include({"id" => 2, 'name' => 'hello'}) }
+      specify { subject.apply(b, delta).should_not include({"id" => 3, 'name' => 'goodbye'}) }
+    end
+  end
 
   context do
     let(:a) { { 'id' => 1, 'name' => 'txt' } }
     let(:b) { { 'id' => 1, 'name' => 'pdf' } }
     let(:delta) { { 'name' => ['txt', 'pdf'] } }
 
-    specify { subject.calc(a, b, :object).should == delta }
-    specify { subject.apply(a, delta, :object).should == b }
-    specify { subject.apply(b, delta, :object).should == a }
+    specify { subject.calc(a, b).should == delta }
+    specify { subject.apply(a, delta).should == b }
+    specify { subject.apply(b, delta).should == a }
   end
 
       context "bad delta" do
@@ -19,7 +118,7 @@ describe "simple diff" do
           let(:b) { { 'id' => 1, 'name' => 'pdf' } }
           let(:bad_delta) { { 'name' => ['doc', 'pdf'] } }
 
-          specify { subject.apply(a, bad_delta, :object)[:name].should be_a(Distinctio::Differs::Simple::Error) }
+          specify { subject.apply(a, bad_delta)[:name].should be_a(Distinctio::Differs::Simple::Error) }
         end
 
         context "delta is not a hash" do
@@ -27,13 +126,13 @@ describe "simple diff" do
 
           specify do
             expect {
-              subject.apply({ 'id' => 1, 'name' => 'txt' }, 'str', :object)
+              subject.apply({ 'id' => 1, 'name' => 'txt' }, 'str')
             }.to raise_error(ArgumentError)
           end
 
           specify do
             expect {
-              subject.apply([{ 'id' => 1, 'name' => 'txt' }], 'str', :object)
+              subject.apply([{ 'id' => 1, 'name' => 'txt' }], 'str')
             }.to raise_error(ArgumentError)
           end
         end
@@ -42,11 +141,11 @@ describe "simple diff" do
           let(:delta) { { 'name' => ['txt', 'pdf'] } }
 
           specify do
-            expect { subject.apply('str', delta, :object) }.to raise_error(ArgumentError)
+            expect { subject.apply('str', delta) }.to raise_error(ArgumentError)
           end
 
           specify do
-            expect { subject.apply('str', delta, :object) }.to raise_error(ArgumentError)
+            expect { subject.apply('str', delta) }.to raise_error(ArgumentError)
           end
         end
       end
@@ -63,21 +162,8 @@ describe "simple diff" do
         } }
         let(:opts) { { :message => :text } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
-      end
-
-      context "one entry as text, whole hash as a hash" do
-        let(:a) { { :id => 1, :name => 'Nancy', :message => 'hello, world!'} }
-        let(:b) { { :id => 1, :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
-        let(:delta) { [
-          {:id=>1, :name=>"Nancy", :message=>"hello, world!"},
-          {:id=>1, :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
-        ] }
-        let(:opts) { { :message => :text } }
-
-        specify { subject.calc(a, b, :simple, opts).should == delta }
-        specify { subject.apply(a, delta, :simple, opts).should == b }
+        specify { subject.calc(a, b, opts).should == delta }
+        specify { subject.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context "entries have no id, whole hash as an object" do
@@ -100,22 +186,8 @@ describe "simple diff" do
           ]
         end
 
-        specify { subject.calc(a, b, :object).should == delta }
-        specify { subject.apply(a, delta, :object).should == b }
-        #specify { subject.apply(b, delta, :object).should == a }
-      end
-
-      context "entries have no id, whole hash as an object" do
-        let(:a) { { :name => 'Nancy', :message => 'hello, world!'} }
-        let(:b) { { :name => 'Nancy', :message => 'The world is mine!', :extra => 'Extra.'} }
-        let(:delta) { [
-          { :name=>"Nancy", :message=>"hello, world!"},
-          { :name=>"Nancy", :message=>"The world is mine!", :extra=>"Extra."}
-        ] }
-        let(:opts) { { :message => :text } }
-
-        specify { subject.calc(a, b, :simple, opts).should == delta }
-        specify { subject.apply(a, delta, :simple, opts).should == b }
+        specify { subject.calc(a, b).should == delta }
+        specify { subject.apply(a, delta).should == b }
       end
 
       context "one entry as text, whole hash as a hash" do
@@ -126,8 +198,8 @@ describe "simple diff" do
           {'id'=>2, 'name'=>"Nancy", 'message'=>"The world is mine!", 'extra'=>"Extra."}
         ] }
 
-        specify { subject.calc(a, b, :object).should == delta }
-        specify { subject.apply(a, delta, :object).should == b.with_indifferent_access }
+        specify { subject.calc(a, b).should == delta }
+        specify { subject.apply(a, delta).should == b.with_indifferent_access }
       end
     end
 
@@ -143,8 +215,8 @@ describe "simple diff" do
         } }
         let(:opts) { { :message => :text, :name => :simple } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { subject.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { subject.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context "with keys as symbols & strings" do
@@ -156,29 +228,22 @@ describe "simple diff" do
         } }
         let(:opts) { { :message => :text, :name => :object } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
-      end
-
-      context "a and b are strings" do
-        let(:a) { 'hello, world!' }
-        let(:b) { 'The world is mine!' }
-        let(:delta) { "@@ -1,13 +1,18 @@\n+T\n he\n-llo,\n  world\n+ is mine\n !\n" }
-
-        specify { subject.calc(a, b, :text).should == delta }
-        specify { subject.apply(a, delta, :text).should == b }
+        specify { subject.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { subject.apply(a, delta, opts).should == b.with_indifferent_access }
       end
     end
 
     context "with nested hashes" do
       context 'one-level nested hash' do
         let(:a) { {
-            :name => 'Page',
-            :page_part_attributes => { :id => 1, :body => "Lorem ipsum", :name => "Heading" }
+          'id' => 1,
+            'name' => 'Page',
+            'page_part_attributes' => { 'id' => 1, 'body' => "Lorem ipsum", :name => "Heading" }
         } }
         let(:b) { {
-            :name => 'Page',
-            :page_part_attributes => { :id => 1, :body => "Lorem ipsum dolor" }
+          'id' => 1,
+            'name' => 'Page',
+            'page_part_attributes' => { 'id' => 1, 'body' => "Lorem ipsum dolor" }
         } }
 
         let(:delta) { subject.calc(a, b) }
@@ -204,8 +269,8 @@ describe "simple diff" do
             ]
           }.with_indifferent_access
         }
-        specify { subject.calc(a, b, :object).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta).should == b.with_indifferent_access }
       end
 
       context 'one-level nested hash' do
@@ -229,8 +294,8 @@ describe "simple diff" do
         end
         let(:opts) { { :page_part_attributes => :simple } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context 'one-level nested hash' do
@@ -254,8 +319,8 @@ describe "simple diff" do
           }
         }
         let(:opts) { { :page_part_attributes => { :body => :text } } }
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context 'one-level nesting' do
@@ -283,8 +348,8 @@ describe "simple diff" do
           ]
         } }
         let(:opts) { { :page_parts => { :body => :text } } }
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context 'one-level nesting with ids as strings and symbols' do
@@ -312,8 +377,8 @@ describe "simple diff" do
           ]
         } }
         let(:opts) { { :page_parts => { :body => :text } } }
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context 'two-level nesting' do
@@ -358,8 +423,8 @@ describe "simple diff" do
         } }
         let(:opts) { { :page_parts => { :body => :text } } }
 
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta, opts).should == b.with_indifferent_access }
       end
 
       context 'two-level nesting' do
@@ -397,8 +462,8 @@ describe "simple diff" do
               {:body=>"@@ -1,8 +1,3 @@\n Sit\n- amet\n", :id=>2}]}
         }
         let(:opts) { { :page_parts => { :elems => { :value => :text }, :body => :text } } }
-        specify { subject.calc(a, b, :object, opts).should == delta.with_indifferent_access }
-        specify { subject.apply(a, delta, :object, opts).should == b.with_indifferent_access }
+        specify { Distinctio::Differs::Object.calc(a, b, opts).should == delta.with_indifferent_access }
+        specify { Distinctio::Differs::Object.apply(a, delta, opts).should == b.with_indifferent_access }
       end
     end
   end
