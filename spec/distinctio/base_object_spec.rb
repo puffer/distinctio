@@ -3,6 +3,54 @@ require 'spec_helper.rb'
 describe "simple diff" do
   subject { Distinctio::Differs::Base }
 
+  context do
+    let(:a) { { 'id' => 1, 'name' => 'txt' } }
+    let(:b) { { 'id' => 1, 'name' => 'pdf' } }
+    let(:delta) { { 'name' => ['txt', 'pdf'] } }
+
+    specify { subject.calc(a, b, :object).should == delta }
+    specify { subject.apply(a, delta, :object).should == b }
+    specify { subject.apply(b, delta, :object).should == a }
+  end
+
+      context "bad delta" do
+        context "delta from another object" do
+          let(:a) { { 'id' => 1, 'name' => 'txt' } }
+          let(:b) { { 'id' => 1, 'name' => 'pdf' } }
+          let(:bad_delta) { { 'name' => ['doc', 'pdf'] } }
+
+          specify { subject.apply(a, bad_delta, :object)[:name].should be_a(Distinctio::Differs::Simple::Error) }
+        end
+
+        context "delta is not a hash" do
+          let(:a) { { 'id' => 1, 'name' => 'txt' } }
+
+          specify do
+            expect {
+              subject.apply({ 'id' => 1, 'name' => 'txt' }, 'str', :object)
+            }.to raise_error(ArgumentError)
+          end
+
+          specify do
+            expect {
+              subject.apply([{ 'id' => 1, 'name' => 'txt' }], 'str', :object)
+            }.to raise_error(ArgumentError)
+          end
+        end
+
+        context "bad argument" do
+          let(:delta) { { 'name' => ['txt', 'pdf'] } }
+
+          specify do
+            expect { subject.apply('str', delta, :object) }.to raise_error(ArgumentError)
+          end
+
+          specify do
+            expect { subject.apply('str', delta, :object) }.to raise_error(ArgumentError)
+          end
+        end
+      end
+
   describe "text method" do
 
     context "a and b are hashes" do

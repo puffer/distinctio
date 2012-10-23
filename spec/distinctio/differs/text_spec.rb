@@ -18,7 +18,6 @@ describe Distinctio::Differs::Text do
     end
 
     describe "raises errors on invalid args" do
-
       specify do
         expect { subject.calc('txt', nil) }.to raise_error(ArgumentError)
       end
@@ -26,7 +25,12 @@ describe Distinctio::Differs::Text do
       specify do
         expect { subject.calc(nil, 'txt') }.to raise_error(ArgumentError)
       end
+    end
 
+    context "raises an exception on mailformed a or b" do
+      specify do
+        expect { Distinctio::Differs::Base.calc(3, 2, :text) }.to raise_error(ArgumentError)
+      end
     end
   end
 
@@ -48,8 +52,6 @@ describe Distinctio::Differs::Text do
       specify do
         expect { subject.apply('txt', '@@ -1') }.to raise_error(ArgumentError)
       end
-
     end
   end
-
 end
