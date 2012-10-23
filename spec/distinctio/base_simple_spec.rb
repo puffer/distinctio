@@ -146,8 +146,8 @@ describe "simple diff" do
           let(:a) { { :id => 1, :data => 'data' } }
           let(:b) { { :id => 1, :code => 'code' } }
           let(:delta) { {
-            'data' =>  ['data', nil, false],
-            'code' =>  [nil, 'code', false]
+            'data' =>  ['data', Distinctio::Nothing.new],
+            'code' =>  [Distinctio::Nothing.new, 'code']
           } }
 
           specify { subject.calc(a, b, :object).should == delta }
@@ -159,8 +159,8 @@ describe "simple diff" do
           let(:a) { { :id => 1, :code => nil, :data => 'data' } }
           let(:b) { { :id => 1, :code => 'code', :data => nil } }
           let(:delta) { {
-            'data' =>  ['data', nil, true],
-            'code' =>  [nil, 'code', true]
+            'data' =>  ['data', nil],
+            'code' =>  [nil, 'code']
           } }
 
           specify { subject.calc(a, b, :object).should == delta }

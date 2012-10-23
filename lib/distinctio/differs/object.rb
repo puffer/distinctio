@@ -15,7 +15,6 @@ module Distinctio
             delta = calc_4_hashes(x, y, key_name, options)
             { key_name => id }.merge(delta)
           end.reject { |attrs| attrs.count == 1 }
-
         elsif object_hash?(a) && object_hash?(b)
           calc_4_hashes a, b, :id, options
         elsif object_hash?(a) && b.nil?
@@ -32,7 +31,6 @@ module Distinctio
           key_name = :id
 
           ary_2_hsh(a).each { |k, v| v[key_name] = k }.tap do |objects|
-
             ary_2_hsh(delta).each do |id, delta|
               attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
                 unless attrs.has_key?(key_name)
@@ -42,7 +40,10 @@ module Distinctio
 
               objects[id] = apply_2_hash(attrs, delta, options)
             end
-          end.values.reject { |attrs| attrs.count == 1 }
+          end.values.reject do |attrs|
+            column_attrs = attrs.except(:id)
+            column_attrs.empty? || column_attrs.values.all?(&:nil?)
+          end
         elsif object_hash?(a) && (delta.is_a?(Hash) || delta.is_a?(Array))
           apply_2_hash(a, delta, options)
         elsif object_hash?(a)

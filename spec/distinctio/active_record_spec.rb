@@ -89,14 +89,7 @@ describe Distinctio::ActiveRecord do
       specify { expect { author.apply(delta) }.to change(author, :name).to('A new name') }
       specify { expect { author.apply(delta) }.to change(author.books, :size).from(1).to(0) }
       specify { expect { author.apply(delta) }.to change(author.awards, :size).from(2).to(1) }
-      specify {
-        puts delta
-        author.apply(delta)
-        author.club.should be_nil
-        puts author.awards.inspect
-        puts "------"
-        puts author.changes
-      }
+      specify { expect { author.apply(delta) }.to change(author, :club).to(nil) }
     end
   end
 
