@@ -48,8 +48,10 @@ module Distinctio
 
     def apply(delta)
       keys, hash_keys = extract_hash_keys(default_keys)
-      opts = hash_keys.map { |e| e.keys.first.to_sym }.each_with_object({}) { |e, h| h[e] = :object }
-      self.distinctio_errors = _apply!(Distinctio::Differs::Base.apply(attributes_are, delta, :object, opts))
+      opts = hash_keys.map { |e| e.keys.first.to_sym }.each_with_object({}) do |e, h|
+        h[e] = :object
+      end
+      self.distinctio_errors = write_attributes!(Distinctio::Differs::Base.apply(attributes_are, delta, :object, opts))
     end
 
     def snapshot keys=[]
@@ -79,13 +81,12 @@ module Distinctio
 
       hash_keys.each_with_object(result) do |pair, result|
         attr_name, attrs = pair.first
+        attrs = [] if attrs == :object
         make_snapshot[result, send(attr_name), attr_name, attrs] if respond_to?(attr_name)
       end
     end
 
-    private
-
-    def _apply!(hsh)
+    def write_attributes!(hsh)
       write_distinctio_attrs = lambda do |o, attrs|
         attrs.each_with_object({}) do |(attr_name, attr_value), errors|
           new_value = if attr_value.is_a?(Distinctio::Differs::Base::Error)
@@ -100,17 +101,15 @@ module Distinctio
 
       write_attrs = lambda do |o, attrs|
         o.id = attrs[:id]
-        if o.respond_to?(:_apply!)
-          o._apply!(attrs)
+        if o.respond_to?(:write_attributes!)
+          o.write_attributes!(attrs)
         else
           write_distinctio_attrs[o, attrs]
         end
       end
 
-      errors = write_distinctio_attrs[self, slice(hsh, attributes.keys)]
-
-      errors2 = slice(hsh, hsh.keys - attributes.keys).each_with_object({}) do |(attr_name, attr_value), errors|
-        association = self.send(attr_name)
+      assoc_errors = slice(hsh, hsh.keys - attributes.keys).each_with_object({}) do |(attr_name, attr_value), errors|
+        association = send(attr_name)
 
         if association.is_a?(Enumerable) && attr_value.is_a?(Array)
           association.clear
@@ -118,13 +117,16 @@ module Distinctio
             errors[attr_name] = ers unless ers.empty?
           end
         elsif attr_value.is_a?(Hash)
-          errors[attr_name] = write_attrs[attr_value, attr_value]
+          errors[attr_name] = write_attrs[association, attr_value]
         elsif attr_value.nil?
           send "#{attr_name}=", nil
         end
       end
-      errors.merge errors2
+
+      self.distinctio_errors = assoc_errors.merge(write_distinctio_attrs[self, slice(hsh, attributes.keys)])
     end
+
+    private
 
     def extract_hash_keys ary
       hash_keys = ary.select { |k| k.is_a? Hash }
@@ -142,13 +144,14 @@ module Distinctio
 
       hash_keys.each_with_object(result) do |pair, result|
         (attr_name, attrs) = pair.first
+        attrs = [] if attrs == :object
 
         next unless hsh.has_key?(attr_name)
         branch = hsh[attr_name]
 
         result[attr_name] = if branch.is_a? Hash
           slice(branch, attrs)
-        elsif branch.is_a? Enumerable
+        elsif branch.is_a? Enumerable || attrs.is_a?(Symbol)
           branch.each_with_object([]) do |h, ary|
             ary << slice(h, attrs) if h.is_a?(Hash)
           end

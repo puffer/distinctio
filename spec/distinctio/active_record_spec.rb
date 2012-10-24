@@ -97,12 +97,39 @@ describe Distinctio::ActiveRecord do
     end
 
     describe "bad delta specified" do
-      let(:club) { Fabricate :club }
-      let(:wrong_delta) { {"name"=>['Fight club', 'A new name']} }
-      before { club.apply(wrong_delta) }
-      specify { club.name.should == 'A new name' }
-      specify { club.distinctio_errors.size.should == 1 }
-      specify { club.should be_invalid }
+      context "bad delta for object without embedded objects" do
+        let(:club) { Fabricate :club }
+        let(:wrong_delta) { {"name"=>['Fight club', 'A new name']} }
+        before { club.apply(wrong_delta) }
+        specify { club.name.should == 'A new name' }
+        specify { club.distinctio_errors.size.should == 1 }
+        specify { club.should be_invalid }
+      end
+
+      context "bad delta for embedded object" do
+        let(:author) { Fabricate :author }
+        let(:wrong_delta) do
+          {
+            "bio"=>["American author and humorist", nil],
+            "club"=>{"name"=>["Sober Clam club", "Drunk Clam club"]},
+            "awards"=>[
+              {"id"=>author.awards.first.id, "name"=>["Award", "Medal of Honor"]},
+              {"id"=>author.awards.last.id, "name"=>["Award", nil]}
+            ],
+            "books"=>[ {"id"=>author.books.first.id, "name"=>["The Adventures of Tom Sawyer", nil], "year"=>[1876, nil]} ]
+          }
+        end
+
+        before(:all) { author.apply(wrong_delta) }
+
+        specify { author.should be_invalid}
+        specify { author.club.should be_invalid }
+        specify { author.club.distinctio_errors.should_not be_empty }
+        specify { author.awards.first.should be_invalid }
+        specify { author.awards.first.distinctio_errors.should_not be_empty }
+        specify { author.awards.last.should be_invalid }
+        specify { author.awards.last.distinctio_errors.should_not be_empty }
+      end
     end
   end
 

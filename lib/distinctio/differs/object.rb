@@ -78,7 +78,6 @@ module Distinctio
         delta.each_with_object(a.with_indifferent_access) do |(attr, value), result|
           opts = options[attr.to_sym] || :simple
           opts = [:object, opts] if opts.is_a?(Hash)
-
           result[attr] = Base.apply(result[attr], value, *opts)
         end.with_indifferent_access #.reject { |attr, value| value.nil? }.with_indifferent_access
       end
