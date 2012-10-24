@@ -5,6 +5,6 @@ class Author < ActiveRecord::Base
   has_many :awards
   has_and_belongs_to_many :books
 
-  distinctio :id, :nonexisting_field, :name, 'bio', { :club => :object },
+  distinctio :id, :nonexisting_field, :name, { 'bio' => :text }, { :club => :object },
     { :awards => [:id, :name] }, {:books => [:id, 'name', :year, :nonexisting_field]}
 end

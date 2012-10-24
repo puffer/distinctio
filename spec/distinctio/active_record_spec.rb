@@ -16,7 +16,78 @@ describe Distinctio::ActiveRecord do
     end
   end
 
-  describe "#apply" do
+  describe "#distinctio_opts" do
+    describe "has :text options" do
+      subject { Fabricate :author }
+      its(:distinctio_opts) { should == { :bio=>:text, :club=>:object, :awards=>:object, :books=>:object } }
+    end
+
+    describe "has only one embedded object" do
+      subject { Fabricate :book }
+      its(:distinctio_opts) { should == { :authors=>:object } }
+    end
+
+    describe "has no distinctio options" do
+      subject { Fabricate :award }
+      its(:distinctio_opts) { should == :object }
+    end
+  end
+
+  describe "#distinctio_diff" do
+    describe "complex object" do
+      subject { Fabricate :author }
+
+      before do
+        subject.bio = "The bio."
+        subject.awards.clear
+        subject.books.first.name = "Treasure Island"
+      end
+
+      specify { subject.distinctio_diff.should have_key(:awards) }
+      specify { subject.distinctio_diff.should have_key(:bio) }
+      specify { subject.distinctio_diff.should have_key(:books) }
+
+      specify do
+        delta = subject.distinctio_diff
+        Distinctio::Differs::Base.apply(subject.attributes_were, delta, :object, subject.distinctio_opts).should ==
+          subject.attributes_are
+      end
+    end
+
+    describe "object with embedded objects" do
+      subject { Fabricate :book_with_author }
+
+      before do
+        subject.name = "Treasure Island"
+        subject.authors.clear
+      end
+
+      specify { subject.distinctio_diff.should have_key(:name) }
+      specify { subject.distinctio_diff.should have_key(:authors) }
+
+      specify do
+        delta = subject.distinctio_diff
+        Distinctio::Differs::Base.apply(subject.attributes_were, delta, :object, subject.distinctio_opts).should ==
+          subject.attributes_are
+      end
+    end
+
+    describe "object with no distinctio options" do
+      subject { Fabricate :award }
+
+      before { subject.name = "Award" }
+
+      specify { subject.distinctio_diff.should have_key(:name) }
+
+      specify do
+        delta = subject.distinctio_diff
+        Distinctio::Differs::Base.apply(subject.attributes_were, delta, :object).should ==
+          subject.attributes_are
+      end
+    end
+  end
+
+  describe "#apply!" do
     describe "no attr specified" do
       let(:club) { Fabricate :club }
       let(:old_attrs) { club.attributes_are }
@@ -24,10 +95,10 @@ describe Distinctio::ActiveRecord do
 
       let(:delta) { Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object) }
 
-      specify { expect { club.apply(delta) }.not_to change(club, :id) }
-      specify { expect { club.apply(delta) }.to change(club, :name).to('A new name') }
-      specify { expect { club.apply(delta) }.to change(club, :url).from(nil).to('http://club.com') }
-      specify { expect { club.apply(delta) }.not_to change(club, :valid?).to(false) }
+      specify { expect { club.apply!(delta) }.not_to change(club, :id) }
+      specify { expect { club.apply!(delta) }.to change(club, :name).to('A new name') }
+      specify { expect { club.apply!(delta) }.to change(club, :url).from(nil).to('http://club.com') }
+      specify { expect { club.apply!(delta) }.not_to change(club, :valid?).to(false) }
     end
 
     describe "attrs specified in distinctio method" do
@@ -42,11 +113,11 @@ describe Distinctio::ActiveRecord do
 
       let(:delta) { Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object, { :authors => :object }) }
 
-      specify { expect { book.apply(delta) }.not_to change(book, :id) }
-      specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
-      specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
-      specify { expect { book.apply(delta) }.to change(book.authors, :size).from(0).to(1) }
-      specify { expect { book.apply(delta) }.not_to change(book, :valid?).to(false) }
+      specify { expect { book.apply!(delta) }.not_to change(book, :id) }
+      specify { expect { book.apply!(delta) }.to change(book, :name).to('A new name') }
+      specify { expect { book.apply!(delta) }.to change(book, :year).to(1900) }
+      specify { expect { book.apply!(delta) }.to change(book.authors, :size).from(0).to(1) }
+      specify { expect { book.apply!(delta) }.not_to change(book, :valid?).to(false) }
     end
 
     describe "attrs specified in distinctio method" do
@@ -64,11 +135,11 @@ describe Distinctio::ActiveRecord do
 
       let(:delta) { Distinctio::Differs::Base.calc(old_attrs, new_attrs, :object, { :authors => :object }) }
 
-      specify { expect { book.apply(delta) }.not_to change(book, :id) }
-      specify { expect { book.apply(delta) }.to change(book, :name).to('A new name') }
-      specify { expect { book.apply(delta) }.to change(book, :year).to(1900) }
-      specify { expect { book.apply(delta) }.to change(book.authors, :size).from(1).to(2) }
-      specify { expect { book.apply(delta) }.not_to change(book, :valid?).to(false) }
+      specify { expect { book.apply!(delta) }.not_to change(book, :id) }
+      specify { expect { book.apply!(delta) }.to change(book, :name).to('A new name') }
+      specify { expect { book.apply!(delta) }.to change(book, :year).to(1900) }
+      specify { expect { book.apply!(delta) }.to change(book.authors, :size).from(1).to(2) }
+      specify { expect { book.apply!(delta) }.not_to change(book, :valid?).to(false) }
     end
 
     describe "attrs specified in distinctio method" do
@@ -88,19 +159,19 @@ describe Distinctio::ActiveRecord do
           { :books => :object, :awards => :object, :club => :object })
       end
 
-      specify { expect { author.apply(delta) }.not_to change(author, :id) }
-      specify { expect { author.apply(delta) }.to change(author, :name).to('A new name') }
-      specify { expect { author.apply(delta) }.to change(author.books, :size).from(1).to(0) }
-      specify { expect { author.apply(delta) }.to change(author.awards, :size).from(2).to(1) }
-      specify { expect { author.apply(delta) }.to change(author, :club).to(nil) }
-      specify { expect { author.apply(delta) }.not_to change(author, :valid?).to(false) }
+      specify { expect { author.apply!(delta) }.not_to change(author, :id) }
+      specify { expect { author.apply!(delta) }.to change(author, :name).to('A new name') }
+      specify { expect { author.apply!(delta) }.to change(author.books, :size).from(1).to(0) }
+      specify { expect { author.apply!(delta) }.to change(author.awards, :size).from(2).to(1) }
+      specify { expect { author.apply!(delta) }.to change(author, :club).to(nil) }
+      specify { expect { author.apply!(delta) }.not_to change(author, :valid?).to(false) }
     end
 
     describe "bad delta specified" do
       context "bad delta for object without embedded objects" do
         let(:club) { Fabricate :club }
         let(:wrong_delta) { {"name"=>['Fight club', 'A new name']} }
-        before { club.apply(wrong_delta) }
+        before { club.apply!(wrong_delta) }
         specify { club.name.should == 'A new name' }
         specify { club.distinctio_errors.size.should == 1 }
         specify { club.should be_invalid }
@@ -116,11 +187,13 @@ describe Distinctio::ActiveRecord do
               {"id"=>author.awards.first.id, "name"=>["Award", "Medal of Honor"]},
               {"id"=>author.awards.last.id, "name"=>["Award", nil]}
             ],
-            "books"=>[ {"id"=>author.books.first.id, "name"=>["The Adventures of Tom Sawyer", nil], "year"=>[1876, nil]} ]
+            "books"=>[
+              {"id"=>author.books.first.id, "name"=>["The Adventures of Tom Sawyer", nil], "year"=>[1876, nil]}
+            ]
           }
         end
 
-        before(:all) { author.apply(wrong_delta) }
+        before(:all) { author.apply!(wrong_delta) }
 
         specify { author.should be_invalid}
         specify { author.club.should be_invalid }

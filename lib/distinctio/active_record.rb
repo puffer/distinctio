@@ -38,6 +38,7 @@ module Distinctio
       end
 
     end
+
     def attributes_were(*attrs)
       slice(@original, attrs.nil? || attrs.empty? ? default_keys : attrs)
     end
@@ -46,7 +47,15 @@ module Distinctio
       snapshot(attrs.nil? || attrs.empty? ? default_keys : attrs)
     end
 
-    def apply(delta)
+    def distinctio_opts
+      attrs2opts(default_keys)
+    end
+
+    def distinctio_diff
+      Distinctio::Differs::Base.calc(attributes_were, attributes_are, :object, distinctio_opts)
+    end
+
+    def apply!(delta)
       keys, hash_keys = extract_hash_keys(default_keys)
       opts = hash_keys.map { |e| e.keys.first.to_sym }.each_with_object({}) do |e, h|
         h[e] = :object
@@ -128,9 +137,23 @@ module Distinctio
 
     private
 
+    def attrs2opts(keys)
+      result = keys.each_with_object({}) do |k, hsh|
+        next unless k.is_a?(Hash)
+        attr_name, attr_opts = k.keys.first, k[k.keys.first]
+        hsh[attr_name.to_sym] = (attr_opts == :text || attr_opts == :object) ? attr_opts : attrs2opts(attr_opts)
+      end
+      result.empty? ? :object : result
+    end
+
     def extract_hash_keys ary
-      hash_keys = ary.select { |k| k.is_a? Hash }
-      return ary - hash_keys, hash_keys
+      hash_keys = ary.select do |k|
+        k.is_a?(Hash) && (k.size == 1 && k[k.keys.first] != :text)
+      end
+
+      attr_keys = (ary - hash_keys).map { |k| k.is_a?(Hash) ? k.keys.first : k}
+
+      return attr_keys, hash_keys
     end
 
     def slice hsh, keys
