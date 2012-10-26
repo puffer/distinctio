@@ -7,7 +7,7 @@ module Distinctio
         if object_hash_array?(a) && object_hash_array?(b)
           calc_4_arrays a, b, :id, options
         elsif object_hash?(a) && object_hash?(b)
-          calc_4_hashes a, b, :id, options
+          calc_4_hashes a.with_indifferent_access, b.with_indifferent_access, :id, options
         elsif object_hash?(a) && b.nil?
           [a, nil]
         elsif a.nil? && object_hash?(b)
@@ -19,7 +19,7 @@ module Distinctio
 
       def apply a, delta, options = {}
         if object_hash_array?(a) && object_hash_array?(delta)
-          apply_2_arrays a, delta, options
+          apply_2_arrays a, delta, :id, options
         elsif object_hash?(a) && (delta.is_a?(Hash) || delta.is_a?(Array))
           apply_2_hash(a, delta, options)
         elsif object_hash?(a)
@@ -38,21 +38,22 @@ module Distinctio
         a, b = ary_2_hsh(a), ary_2_hsh(b)
 
         (a.keys | b.keys).map do |id|
-          x = (a[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
-          y = (b[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
-
-          delta = calc_4_hashes(x, y, key_name, options)
-          { key_name => id }.merge(delta)
+          x = ensure_id_in_hash(a[id], key_name, id)
+          y = ensure_id_in_hash(b[id], key_name, id)
+          { key_name => id }.merge calc_4_hashes(x, y, key_name, options)
         end.reject { |attrs| attrs.count == 1 }
       end
 
-      def calc_4_hashes(a, b, key_name, options={})
-        a, b = a.with_indifferent_access, b.with_indifferent_access
+      def ensure_id_in_hash hsh, key_name, id
+        (hsh || {}).with_indifferent_access.tap { |h| h[key_name] = id }
+      end
 
+      def calc_4_hashes(a, b, key_name, options={})
         return [a, b] if (a[:id].present?) && a[:id] != b[:id]
 
         (a.keys | b.keys).each_with_object({}) do |attr, result|
-          next if (x = a[attr]) == (y = b[attr])
+          x, y = a[attr], b[attr]
+          next if x == y
           opts = options[attr.to_sym] || :simple
           opts = [:object, opts] if opts.is_a?(Hash)
 
@@ -60,9 +61,7 @@ module Distinctio
         end.with_indifferent_access
       end
 
-      def apply_2_arrays a, delta, options
-        key_name = :id
-
+      def apply_2_arrays a, delta, key_name, options
         ary_2_hsh(a).each { |k, v| v[key_name] = k }.tap do |objects|
           ary_2_hsh(delta).each do |id, delta|
             attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
