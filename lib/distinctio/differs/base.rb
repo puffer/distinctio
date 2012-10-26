@@ -9,12 +9,12 @@ module Distinctio
 
       def calc(a, b, *mode_and_options)
         mode, options = extract_mode_and_options(mode_and_options)
-        eval("Distinctio::Differs::#{mode.to_s.camelize}").calc(a, b, options)
+        find_subclass(mode).calc(a, b, options)
       end
 
       def apply a, delta, *mode_and_options
         mode, options = extract_mode_and_options(mode_and_options)
-        eval("Distinctio::Differs::#{mode.to_s.camelize}").apply(a, delta, options)
+        find_subclass(mode).apply(a, delta, options)
       end
 
       private
@@ -23,6 +23,10 @@ module Distinctio
       def extract_mode_and_options(mode_and_options)
         return mode_and_options.first || :simple,
           mode_and_options.last.is_a?(::Hash) ? mode_and_options.pop : {}
+      end
+
+      def find_subclass mode
+        eval("Distinctio::Differs::#{mode.to_s.camelize}")
       end
     end
   end

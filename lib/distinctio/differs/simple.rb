@@ -5,8 +5,8 @@ module Distinctio
       class Error < Distinctio::Differs::Base::Error
         attr_reader :actual_a, :expected_a, :expected_b
 
-        def initialize actual_a, expected_a, expected_b
-          @actual_a, @expected_a, @expected_b = actual_a, expected_a, expected_b
+        def initialize actual_a, delta
+          @actual_a, @expected_a, @expected_b = actual_a, delta.first, delta.second
         end
 
         def value
@@ -32,7 +32,7 @@ module Distinctio
         elsif a == delta.first
           delta.last
         else
-          Error.new a, delta.first, delta.second
+          Error.new a, delta
         end
       end
 
