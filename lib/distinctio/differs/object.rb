@@ -5,16 +5,7 @@ module Distinctio
 
       def calc a, b, options = {}
         if object_hash_array?(a) && object_hash_array?(b)
-          key_name = :id
-          a, b = ary_2_hsh(a), ary_2_hsh(b)
-
-          (a.keys | b.keys).map do |id|
-            x = (a[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
-            y = (b[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
-
-            delta = calc_4_hashes(x, y, key_name, options)
-            { key_name => id }.merge(delta)
-          end.reject { |attrs| attrs.count == 1 }
+          calc_4_arrays a, b, :id, options
         elsif object_hash?(a) && object_hash?(b)
           calc_4_hashes a, b, :id, options
         elsif object_hash?(a) && b.nil?
@@ -28,22 +19,7 @@ module Distinctio
 
       def apply a, delta, options = {}
         if object_hash_array?(a) && object_hash_array?(delta)
-          key_name = :id
-
-          ary_2_hsh(a).each { |k, v| v[key_name] = k }.tap do |objects|
-            ary_2_hsh(delta).each do |id, delta|
-              attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
-                unless attrs.has_key?(key_name)
-                  attrs.merge!({ key_name => id })
-                end
-              end
-
-              objects[id] = apply_2_hash(attrs, delta, options)
-            end
-          end.values.reject do |attrs|
-            column_attrs = attrs.except(:id)
-            column_attrs.empty? || column_attrs.values.all?(&:nil?)
-          end
+          apply_2_arrays a, delta, options
         elsif object_hash?(a) && (delta.is_a?(Hash) || delta.is_a?(Array))
           apply_2_hash(a, delta, options)
         elsif object_hash?(a)
@@ -57,6 +33,18 @@ module Distinctio
 
     private
     module_function
+
+      def calc_4_arrays(a, b, key_name, options={})
+        a, b = ary_2_hsh(a), ary_2_hsh(b)
+
+        (a.keys | b.keys).map do |id|
+          x = (a[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
+          y = (b[id] || {}).with_indifferent_access.tap { |h| h[key_name] = id }
+
+          delta = calc_4_hashes(x, y, key_name, options)
+          { key_name => id }.merge(delta)
+        end.reject { |attrs| attrs.count == 1 }
+      end
 
       def calc_4_hashes(a, b, key_name, options={})
         a, b = a.with_indifferent_access, b.with_indifferent_access
@@ -72,6 +60,25 @@ module Distinctio
         end.with_indifferent_access
       end
 
+      def apply_2_arrays a, delta, options
+        key_name = :id
+
+        ary_2_hsh(a).each { |k, v| v[key_name] = k }.tap do |objects|
+          ary_2_hsh(delta).each do |id, delta|
+            attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
+              unless attrs.has_key?(key_name)
+                attrs.merge!({ key_name => id })
+              end
+            end
+
+            objects[id] = apply_2_hash(attrs, delta, options)
+          end
+        end.values.reject do |attrs|
+          column_attrs = attrs.except(key_name)
+          column_attrs.empty? || column_attrs.values.all?(&:nil?)
+        end
+      end
+
       def apply_2_hash a, delta, options={}
         return Base.apply(a, delta, :simple) if delta.is_a?(Array)
 
@@ -79,7 +86,7 @@ module Distinctio
           opts = options[attr.to_sym] || :simple
           opts = [:object, opts] if opts.is_a?(Hash)
           result[attr] = Base.apply(result[attr], value, *opts)
-        end.with_indifferent_access #.reject { |attr, value| value.nil? }.with_indifferent_access
+        end.with_indifferent_access
       end
 
       def ary_2_hsh(ary)
