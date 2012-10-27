@@ -49,16 +49,25 @@ module Distinctio
       end
 
       def calc_4_hashes(a, b, key_name, options={})
-        return [a, b] if (a[:id].present?) && a[:id] != b[:id]
+        if a[key_name].present? && a[key_name] != b[key_name]
+          [a, b]
+        else
+          _calc_4_hashes(a, b, options)
+        end
+      end
 
+      def _calc_4_hashes(a, b, options)
         (a.keys | b.keys).each_with_object({}) do |attr, result|
-          x, y = a[attr], b[attr]
-          next if x == y
-          opts = options[attr.to_sym] || :simple
-          opts = [:object, opts] if opts.is_a?(Hash)
-
-          result[attr] = Base.calc x, y, *opts
+          x, y, opts = a[attr], b[attr], options[attr.to_sym]
+          diff = _calc_4_hash_elements(x, y, opts)
+          result[attr] = diff if diff.present?
         end.with_indifferent_access
+      end
+
+      def _calc_4_hash_elements x, y, opts=:simple
+        return if x == y
+        opts = [:object, opts] if opts.is_a?(Hash)
+        Base.calc x, y, *opts
       end
 
       def apply_2_arrays a, delta, key_name, options
