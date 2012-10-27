@@ -38,13 +38,13 @@ module Distinctio
         a, b = ary_2_hsh(a), ary_2_hsh(b)
 
         (a.keys | b.keys).map do |id|
-          x = ensure_id_in_hash(a[id], key_name, id)
-          y = ensure_id_in_hash(b[id], key_name, id)
+          x = ensure_hash_contains_id(a[id], key_name, id)
+          y = ensure_hash_contains_id(b[id], key_name, id)
           { key_name => id }.merge calc_4_hashes(x, y, key_name, options)
         end.reject { |attrs| attrs.count == 1 }
       end
 
-      def ensure_id_in_hash hsh, key_name, id
+      def ensure_hash_contains_id hsh, key_name, id
         (hsh || {}).with_indifferent_access.tap { |h| h[key_name] = id }
       end
 
@@ -59,29 +59,31 @@ module Distinctio
       def _calc_4_hashes(a, b, options)
         (a.keys | b.keys).each_with_object({}) do |attr, result|
           x, y, opts = a[attr], b[attr], options[attr.to_sym]
-          diff = _calc_4_hash_elements(x, y, opts)
+          diff = _calc_4_hash_element(x, y, opts)
           result[attr] = diff if diff.present?
         end.with_indifferent_access
       end
 
-      def _calc_4_hash_elements x, y, opts=:simple
+      def _calc_4_hash_element x, y, opts=:simple
         return if x == y
         opts = [:object, opts] if opts.is_a?(Hash)
         Base.calc x, y, *opts
       end
 
       def apply_2_arrays a, delta, key_name, options
-        ary_2_hsh(a).each { |k, v| v[key_name] = k }.tap do |objects|
-          ary_2_hsh(delta).each do |id, delta|
-            attrs = (objects[id] || {}).with_indifferent_access.tap do |attrs|
-              unless attrs.has_key?(key_name)
-                attrs.merge!({ key_name => id })
-              end
-            end
+        objects = ary_2_hsh(a).each { |k, v| v[key_name] = k }
 
-            objects[id] = apply_2_hash(attrs, delta, options)
-          end
-        end.values.reject do |attrs|
+        ary_2_hsh(delta).each do |id, delta|
+          attrs = (objects[id] || {}).with_indifferent_access
+          attrs[key_name] = id
+          objects[id] = apply_2_hash(attrs, delta, options)
+        end
+
+        remove_objects_with_no_column_attrs(objects, key_name)
+      end
+
+      def remove_objects_with_no_column_attrs(objects, key_name)
+        objects.values.reject do |attrs|
           column_attrs = attrs.except(key_name)
           column_attrs.empty? || column_attrs.values.all?(&:nil?)
         end
