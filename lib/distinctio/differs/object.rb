@@ -38,14 +38,14 @@ module Distinctio
         a, b = ary_2_hsh(a), ary_2_hsh(b)
 
         (a.keys | b.keys).map do |id|
-          x = ensure_hash_contains_id(a[id], key_name, id)
-          y = ensure_hash_contains_id(b[id], key_name, id)
+          x = ensure_hash_contains_key(a[id], key_name, id)
+          y = ensure_hash_contains_key(b[id], key_name, id)
           { key_name => id }.merge calc_4_hashes(x, y, key_name, options)
         end.reject { |attrs| attrs.count == 1 }
       end
 
-      def ensure_hash_contains_id hsh, key_name, id
-        (hsh || {}).with_indifferent_access.tap { |h| h[key_name] = id }
+      def ensure_hash_contains_key hsh, key, value
+        (hsh || {}).with_indifferent_access.tap { |h| h[key] = value }
       end
 
       def calc_4_hashes(a, b, key_name, options={})
@@ -65,9 +65,10 @@ module Distinctio
       end
 
       def _calc_4_hash_element x, y, opts=:simple
-        return if x == y
-        opts = [:object, opts] if opts.is_a?(Hash)
-        Base.calc x, y, *opts
+        unless x == y
+          opts = [:object, opts] if opts.is_a?(Hash)
+          Base.calc x, y, *opts
+        end
       end
 
       def apply_2_arrays a, delta, key_name, options
@@ -79,10 +80,10 @@ module Distinctio
           objects[id] = apply_2_hash(attrs, delta, options)
         end
 
-        remove_objects_with_no_column_attrs(objects, key_name)
+        remove_empty_object_hashes(objects, key_name)
       end
 
-      def remove_objects_with_no_column_attrs(objects, key_name)
+      def remove_empty_object_hashes(objects, key_name)
         objects.values.reject do |attrs|
           column_attrs = attrs.except(key_name)
           column_attrs.empty? || column_attrs.values.all?(&:nil?)
